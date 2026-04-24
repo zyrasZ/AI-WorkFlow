@@ -5,18 +5,99 @@ import { Copy, CheckCircle, ChevronDown, ChevronUp, Sparkles, FileText } from 'l
 
 /**
  * OutputNode - Hiển thị kết quả AI response trực quan cho người dùng
+ * Tự động cập nhật liên tục khi nhận kết quả mới từ các node được nối
  */
-const OutputNode = memo(({ data, selected }) => {
+const OutputNode = memo(({ data, selected, id }) => {
   const [copied, setCopied] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [displayResult, setDisplayResult] = useState(data.result || null);
+  const [resultHistory, setResultHistory] = useState([]);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const { label = 'Kết quả AI', color = '#f59e0b', status = 'idle', lastExecuted } = data;
+  const { 
+    label = 'Kết quả AI', 
+    color = '#f59e0b', 
+    status = 'idle', 
+    lastExecuted,
+    getNodes,
+    getEdges 
+  } = data;
 
-  // Sync khi App.jsx cập nhật data.result sau workflow
+  // Sync khi App.jsx cập nhật data.result sau workflow hoặc từ connected nodes
   useEffect(() => {
-    if (data.result) setDisplayResult(data.result);
-  }, [data.result]);
+    if (data.result) {
+      console.log('📥 OutputNode received new result:', id, data.result);
+      
+      // Show update animation
+      setIsUpdating(true);
+      setTimeout(() => setIsUpdating(false), 1000);
+      
+      setDisplayResult(data.result);
+      
+      // Add to history
+      setResultHistory(prev => {
+        const newHistory = [...prev, {
+          result: data.result,
+          timestamp: data.lastExecuted || new Date().toISOString()
+        }];
+        // Keep only last 5 results
+        return newHistory.slice(-5);
+      });
+    }
+  }, [data.result, data.lastExecuted, id]);
+
+  // Poll for updates from connected source nodes
+  useEffect(() => {
+    if (!getNodes || !getEdges) return;
+
+    const checkForUpdates = () => {
+      const allNodes = getNodes();
+      const allEdges = getEdges();
+      
+      // Find source nodes connected to this output node
+      const incomingEdges = allEdges.filter(e => e.target === id);
+      
+      for (const edge of incomingEdges) {
+        const sourceNode = allNodes.find(n => n.id === edge.source);
+        if (sourceNode?.data?.result) {
+          // Check if result is different from current
+          const sourceResult = JSON.stringify(sourceNode.data.result);
+          const currentResult = JSON.stringify(displayResult);
+          
+          if (sourceResult !== currentResult) {
+            console.log('🔄 OutputNode detected new result from source:', edge.source);
+            
+            // Show update animation
+            setIsUpdating(true);
+            setTimeout(() => setIsUpdating(false), 1000);
+            
+            setDisplayResult(sourceNode.data.result);
+            
+            // Update data.result to sync with parent
+            data.result = sourceNode.data.result;
+            data.lastExecuted = sourceNode.data.lastExecuted;
+            
+            // Add to history
+            setResultHistory(prev => {
+              const newHistory = [...prev, {
+                result: sourceNode.data.result,
+                timestamp: sourceNode.data.lastExecuted || new Date().toISOString()
+              }];
+              return newHistory.slice(-5);
+            });
+          }
+        }
+      }
+    };
+
+    // Check immediately
+    checkForUpdates();
+
+    // Poll every 500ms for updates
+    const interval = setInterval(checkForUpdates, 500);
+
+    return () => clearInterval(interval);
+  }, [getNodes, getEdges, id, displayResult, data]);
 
   const responseText =
     displayResult?.response ||
@@ -44,11 +125,18 @@ const OutputNode = memo(({ data, selected }) => {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.92 }}
-      animate={{ opacity: 1, scale: 1 }}
+      animate={{ 
+        opacity: 1, 
+        scale: 1,
+        boxShadow: isUpdating 
+          ? '0 0 0 2px rgba(34, 197, 94, 0.4), 0 0 20px rgba(34, 197, 94, 0.2)'
+          : '0 0 0 0px transparent'
+      }}
       transition={{ duration: 0.25 }}
       className={`relative w-[340px] rounded-2xl border backdrop-blur-md shadow-2xl transition-all duration-300
         ${statusBorder[status] || 'border-white/15'}
         ${selected ? 'ring-2 ring-yellow-400/40 ring-offset-1 ring-offset-black' : ''}
+        ${isUpdating ? 'border-green-400/60' : ''}
       `}
       style={{ background: 'linear-gradient(135deg, rgba(20,20,24,0.97) 0%, rgba(10,10,14,0.99) 100%)' }}
     >
@@ -70,6 +158,11 @@ const OutputNode = memo(({ data, selected }) => {
           {status === 'success' && responseText && (
             <span className="flex items-center gap-1 text-[10px] text-green-400 bg-green-400/10 border border-green-400/20 rounded-full px-2 py-0.5">
               <Sparkles size={9} /> Có kết quả
+            </span>
+          )}
+          {resultHistory.length > 1 && (
+            <span className="flex items-center gap-1 text-[10px] text-blue-400 bg-blue-400/10 border border-blue-400/20 rounded-full px-2 py-0.5">
+              {resultHistory.length} updates
             </span>
           )}
         </div>
@@ -120,6 +213,19 @@ const OutputNode = memo(({ data, selected }) => {
             {/* Has result */}
             {status !== 'running' && responseText && (
               <div className="p-4">
+                {/* Update indicator */}
+                {isUpdating && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="mb-3 flex items-center gap-2 text-xs text-green-400 bg-green-400/10 border border-green-400/20 rounded-lg px-3 py-2"
+                  >
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                    <span>Đang cập nhật kết quả mới...</span>
+                  </motion.div>
+                )}
+                
                 <div
                   className="text-sm text-white/90 leading-relaxed whitespace-pre-wrap max-h-[320px] overflow-y-auto pr-1"
                   style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}

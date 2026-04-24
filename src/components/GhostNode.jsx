@@ -58,7 +58,9 @@ const GhostNode = memo(({ data, selected, id }) => {
     hasOutput = true,
     processor,
     preview,
-    result        // từ workflow execution (App.jsx setNodes)
+    result,        // từ workflow execution (App.jsx setNodes)
+    hasUpdatedInput = false, // Flag to show input has changed
+    inputPrompt    // New input from connected PromptNode
   } = data;
 
   // Sync result từ workflow vào local state
@@ -84,6 +86,9 @@ const GhostNode = memo(({ data, selected, id }) => {
 
     setIsProcessing(true);
     data.fields = localFields;
+
+    // Clear the updated input flag
+    data.hasUpdatedInput = false;
 
     // Tìm PromptNode được kết nối với node này
     let promptFromConnectedNode = '';
@@ -112,10 +117,11 @@ const GhostNode = memo(({ data, selected, id }) => {
     );
     const fieldPrompt = promptField?.value?.trim() || '';
 
-    // Priority: connected PromptNode > field prompt > data prompt
-    const finalPrompt = promptFromConnectedNode || fieldPrompt || (data.value || data.prompt || '').trim();
+    // Priority: inputPrompt (from update) > connected PromptNode > field prompt > data prompt
+    const finalPrompt = data.inputPrompt || promptFromConnectedNode || fieldPrompt || (data.value || data.prompt || '').trim();
 
     console.log('🔍 executeProcessor debug:', {
+      inputPrompt: data.inputPrompt,
       promptFromConnectedNode,
       fieldPrompt,
       finalPrompt,
@@ -263,7 +269,11 @@ const GhostNode = memo(({ data, selected, id }) => {
           <button
             onClick={executeProcessor}
             disabled={isProcessing}
-            className="flex-1 flex items-center justify-center space-x-1 px-3 py-1.5 text-xs font-medium bg-white/10 hover:bg-white/20 disabled:bg-white/5 text-white rounded-lg transition-colors border border-white/10"
+            className={`
+              flex-1 flex items-center justify-center space-x-1 px-3 py-1.5 text-xs font-medium 
+              ${hasUpdatedInput ? 'bg-yellow-500/20 hover:bg-yellow-500/30 border-yellow-400/40 text-yellow-300' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}
+              disabled:bg-white/5 rounded-lg transition-colors border
+            `}
           >
             {isProcessing ? (
               <>
@@ -273,11 +283,19 @@ const GhostNode = memo(({ data, selected, id }) => {
             ) : (
               <>
                 <Play size={12} />
-                <span>Run Model</span>
+                <span>{hasUpdatedInput ? 'Run with New Input' : 'Run Model'}</span>
               </>
             )}
           </button>
         </div>
+        
+        {/* Input Update Indicator */}
+        {hasUpdatedInput && !isProcessing && (
+          <div className="mt-2 flex items-center gap-1.5 text-[10px] text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 rounded-lg px-2 py-1">
+            <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" />
+            <span>Input đã thay đổi - Nhấn Run để cập nhật</span>
+          </div>
+        )}
       </div>
 
       {/* Expanded Content - REMOVED */}

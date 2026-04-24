@@ -232,27 +232,113 @@ export default function App() {
     ));
   }, [setNodes]);
 
-  // Khi 1 node chạy xong, truyền result sang các node được kết nối phía sau
-  const handleNodeResult = useCallback((sourceNodeId, result) => {
-    setNodes(nds => {
-      // Tìm tất cả node đích được nối từ sourceNodeId
-      const targetIds = edges
-        .filter(e => e.source === sourceNodeId)
-        .map(e => e.target);
+  // Handle prompt change - update connected nodes with new input
+  const handlePromptChange = useCallback((promptNodeId, newPrompt, connectedTargets) => {
+    console.log('🔄 Prompt changed, updating connected nodes:', connectedTargets);
+    
+    // Update connected nodes to show they have new input
+    setNodes(nds => nds.map(node => {
+      if (connectedTargets.includes(node.id)) {
+        // Mark node as having updated input
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            inputPrompt: newPrompt,
+            hasUpdatedInput: true,
+            // Clear old result to show it needs re-run
+            // result: null, // Uncomment if you want to clear result on input change
+          }
+        };
+      }
+      return node;
+    }));
 
-      return nds.map(node => {
-        // Cập nhật chính node đó
-        if (node.id === sourceNodeId) {
-          return { ...node, data: { ...node.data, result, lastExecuted: new Date().toISOString(), status: 'success' } };
-        }
-        // Truyền result sang các node đích (OutputNode, hoặc node tiếp theo)
-        if (targetIds.includes(node.id)) {
-          return { ...node, data: { ...node.data, result, status: 'success' } };
+    // Also update any Output Nodes connected to those AI nodes
+    const currentEdges = reactFlowInstance?.getEdges() || edges;
+    const outputTargets = currentEdges
+      .filter(e => connectedTargets.includes(e.source))
+      .map(e => e.target);
+    
+    if (outputTargets.length > 0) {
+      console.log('📤 Also updating output nodes:', outputTargets);
+      setNodes(nds => nds.map(node => {
+        if (outputTargets.includes(node.id)) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              // Clear result to show it needs re-run
+              // result: null, // Uncomment if you want to clear result on input change
+            }
+          };
         }
         return node;
-      });
-    });
-  }, [edges, setNodes]);
+      }));
+    }
+  }, [reactFlowInstance, edges, setNodes]);
+
+  // Khi 1 node chạy xong, truyền result sang các node được kết nối phía sau
+  const handleNodeResult = useCallback((sourceNodeId, result) => {
+    console.log('📤 Node result ready, syncing to connected nodes:', sourceNodeId);
+    
+    // Get current edges
+    const currentEdges = reactFlowInstance?.getEdges() || edges;
+    
+    // Find all target nodes connected to this source
+    const targetIds = currentEdges
+      .filter(e => e.source === sourceNodeId)
+      .map(e => e.target);
+
+    console.log('🎯 Target nodes to update:', targetIds);
+
+    setNodes(nds => nds.map(node => {
+      // Update the source node itself with result
+      if (node.id === sourceNodeId) {
+        return { 
+          ...node, 
+          data: { 
+            ...node.data, 
+            result, 
+            lastExecuted: new Date().toISOString(), 
+            status: 'success' 
+          } 
+        };
+      }
+      
+      // Update all connected target nodes with the result
+      if (targetIds.includes(node.id)) {
+        console.log('✅ Updating target node:', node.id, node.data.label);
+        return { 
+          ...node, 
+          data: { 
+            ...node.data, 
+            result, 
+            lastExecuted: new Date().toISOString(),
+            status: 'success'
+          } 
+        };
+      }
+      
+      return node;
+    }));
+
+    // Animate edges to show data flow
+    setEdges(eds => eds.map(edge => 
+      edge.source === sourceNodeId 
+        ? { ...edge, data: { ...edge.data, success: true, animated: true } }
+        : edge
+    ));
+
+    // Reset edge animation after 2 seconds
+    setTimeout(() => {
+      setEdges(eds => eds.map(edge => 
+        edge.source === sourceNodeId 
+          ? { ...edge, data: { ...edge.data, success: false, animated: false } }
+          : edge
+      ));
+    }, 2000);
+  }, [reactFlowInstance, edges, setNodes, setEdges]);
 
   // Execute workflow with REAL API integration
   const handleRunWorkflow = async () => {
@@ -293,9 +379,10 @@ export default function App() {
 
       console.log('Workflow execution completed:', results);
 
-      // Update nodes with results
+      // Update nodes with results and sync to connected nodes
       results.forEach(result => {
         if (result.success && result.data) {
+          // Update the node itself
           setNodes(nds => nds.map(node => 
             node.id === result.nodeId 
               ? { 
@@ -303,26 +390,23 @@ export default function App() {
                   data: { 
                     ...node.data, 
                     result: result.data,
-                    lastExecuted: new Date().toISOString()
+                    lastExecuted: new Date().toISOString(),
+                    status: 'success'
                   } 
                 }
               : node
           ));
-        }
-      });
 
-      // Sync results to connected downstream nodes (Output Nodes)
-      setTimeout(() => {
-        results.forEach(result => {
-          if (result.success && result.data) {
-            // Find all nodes connected to this node
-            const connectedTargets = currentEdges
-              .filter(e => e.source === result.nodeId)
-              .map(e => e.target);
+          // Immediately sync to connected downstream nodes
+          const connectedTargets = currentEdges
+            .filter(e => e.source === result.nodeId)
+            .map(e => e.target);
+          
+          if (connectedTargets.length > 0) {
+            console.log('📤 Syncing result from', result.nodeId, 'to', connectedTargets);
             
-            if (connectedTargets.length > 0) {
-              console.log('📤 Syncing result from', result.nodeId, 'to', connectedTargets);
-              
+            // Use setTimeout to ensure state is updated
+            setTimeout(() => {
               setNodes(nds => nds.map(node => 
                 connectedTargets.includes(node.id)
                   ? { 
@@ -336,10 +420,10 @@ export default function App() {
                     }
                   : node
               ));
-            }
+            }, 100);
           }
-        });
-      }, 500);
+        }
+      });
 
       // Reset edge animations after completion
       setTimeout(() => {
@@ -447,6 +531,7 @@ export default function App() {
         data: {
           ...nodeData,
           onDataChange: handleNodeDataChange, // Pass callback to nodes
+          onPromptChange: handlePromptChange, // Pass prompt change callback
           onNodeResult: handleNodeResult, // Pass result callback
           getNodes: () => reactFlowInstance?.getNodes() || [],
           getEdges: () => reactFlowInstance?.getEdges() || [],

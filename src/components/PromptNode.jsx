@@ -25,7 +25,10 @@ const PromptNode = memo(({ data, selected, id }) => {
     label = 'Prompt',
     color = '#8b5cf6',
     hasOutput = true,
-    onDataChange
+    onDataChange,
+    onPromptChange, // Callback để trigger update cho connected nodes
+    getNodes,
+    getEdges
   } = data;
 
   // Handle prompt text change and propagate to parent
@@ -40,6 +43,19 @@ const PromptNode = memo(({ data, selected, id }) => {
     // Notify parent component about data change
     if (onDataChange) {
       onDataChange(id, { value: newValue, prompt: newValue, variables });
+    }
+
+    // Trigger update for connected AI nodes
+    if (onPromptChange && getNodes && getEdges) {
+      const allEdges = getEdges();
+      const connectedTargets = allEdges
+        .filter(e => e.source === id)
+        .map(e => e.target);
+      
+      if (connectedTargets.length > 0) {
+        console.log('📤 Prompt changed, notifying connected nodes:', connectedTargets);
+        onPromptChange(id, newValue, connectedTargets);
+      }
     }
     
     // Auto-resize textarea
