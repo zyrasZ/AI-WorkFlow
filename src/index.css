@@ -1,0 +1,392 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+    background: #0B0B0E;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #e2e8f0;
+    overflow: hidden;
+  }
+
+  body.landing-mode {
+    overflow: auto;
+  }
+}
+
+/* Figma Weave Style Dot Grid Background */
+.figma-weave-dots {
+  background-color: #0B0B0E;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.12) 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+}
+
+/* Enhanced dot grid with subtle pattern */
+.dot-grid-enhanced {
+  background-color: #0B0B0E;
+  background-image: 
+    radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0),
+    radial-gradient(circle at 13px 13px, rgba(255,255,255,0.08) 0.5px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* Infinite canvas feel */
+.infinite-canvas {
+  background: 
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,0.02) 0%, transparent 50%),
+    radial-gradient(circle, rgba(255,255,255,0.12) 1.2px, transparent 1.2px);
+  background-size: 
+    100vw 100vh,
+    24px 24px;
+  background-position: center, 0 0;
+}
+
+/* Neon glow edge animation */
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+@keyframes weave-pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animated-edge {
+  animation: dash-flow 1s linear infinite;
+}
+
+.weave-pulse {
+  animation: weave-pulse 2s ease-in-out infinite;
+}
+
+/* Glassmorphism node - Figma Weave style */
+.ghost-node {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.08) 0%, 
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* React Flow overrides for Figma Weave */
+.react-flow__renderer {
+  background: transparent !important;
+}
+
+.react-flow__background {
+  display: none !important;
+}
+
+.react-flow__pane {
+  background: transparent !important;
+}
+
+.react-flow__controls {
+  background: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.react-flow__controls-button {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+  fill: rgba(255, 255, 255, 0.6) !important;
+  transition: all 0.2s ease;
+}
+
+.react-flow__controls-button:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  fill: rgba(255, 255, 255, 0.9) !important;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: none !important;
+}
+
+.react-flow__minimap {
+  background: rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.react-flow__handle {
+  width: 12px !important;
+  height: 12px !important;
+  border: 2px solid rgba(255,255,255,0.4) !important;
+  background: rgba(0,0,0,0.6) !important;
+  backdrop-filter: blur(8px) !important;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.react-flow__handle:hover {
+  transform: scale(1.3);
+  background: rgba(255,255,255,0.2) !important;
+  border-color: rgba(255,255,255,0.8) !important;
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.2);
+}
+
+.react-flow__handle-connecting {
+  background: rgba(59, 130, 246, 0.8) !important;
+  border-color: #3b82f6 !important;
+}
+
+/* Custom scrollbar for Figma Weave */
+::-webkit-scrollbar { 
+  width: 6px; 
+}
+
+::-webkit-scrollbar-track { 
+  background: transparent; 
+}
+
+::-webkit-scrollbar-thumb { 
+  background: rgba(255,255,255,0.2); 
+  border-radius: 6px;
+  backdrop-filter: blur(8px);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+/* Scrollbar for sidebar panels */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 4px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+/* Ensure proper height for flex containers */
+.sidebar-container {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden; /* Prevent container from scrolling */
+}
+
+.sidebar-content {
+  flex: 1;
+  min-height: 0; /* Critical for flex scrolling */
+  overflow-y: auto;
+}
+
+/* Force scroll container to work properly */
+.scroll-container {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Selection styles */
+::selection {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+::-moz-selection {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+/* Focus styles */
+*:focus {
+  outline: 2px solid rgba(59, 130, 246, 0.5);
+  outline-offset: 2px;
+}
+
+/* Double Sidebar System - Figma Weave Style */
+.slim-nav {
+  background: linear-gradient(180deg, #000000 0%, #0a0a0c 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.library-panel {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Professional Typography */
+.section-title {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.professional-text {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Node Grid System */
+.node-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.node-card {
+  aspect-ratio: 1;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.node-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.02);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.node-card:active {
+  cursor: grabbing;
+  transform: scale(0.98);
+}
+
+/* Tooltip System */
+.tooltip {
+  position: absolute;
+  z-index: 1000;
+  padding: 0.5rem 0.75rem;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.tooltip::before {
+  content: '';
+  position: absolute;
+  border: 4px solid transparent;
+}
+
+/* Slim Nav Tooltips */
+.slim-nav .tooltip {
+  left: 100%;
+  margin-left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.slim-nav .tooltip::before {
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-right-color: rgba(0, 0, 0, 0.9);
+}
+
+/* Active States */
+.nav-item-active {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  border-right: 2px solid #fbbf24;
+  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.6));
+}
+
+/* Glow Effects */
+.glow-blue { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+.glow-green { box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
+.glow-purple { box-shadow: 0 0 20px rgba(139, 92, 246, 0.3); }
+.glow-orange { box-shadow: 0 0 20px rgba(249, 115, 22, 0.3); }
+.glow-red { box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); }
+.glow-yellow { box-shadow: 0 0 20px rgba(251, 191, 36, 0.3); }
+
+/* Smooth Animations */
+.slide-in-left {
+  animation: slideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Search Bar Enhancement */
+.search-input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+}
+
+.search-input:focus {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Status Indicators */
+.status-online {
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+.status-busy {
+  background: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+}
+
+.status-offline {
+  background: #6b7280;
+  box-shadow: 0 0 8px rgba(107, 114, 128, 0.6);
+}
+/* Loading spinner animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
