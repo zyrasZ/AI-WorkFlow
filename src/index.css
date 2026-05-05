@@ -224,7 +224,11 @@
 
 /* Focus styles */
 *:focus {
-  outline: 2px solid rgba(59, 130, 246, 0.5);
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid rgba(234,97,19,0.5);
   outline-offset: 2px;
 }
 

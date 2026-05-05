@@ -6,8 +6,8 @@ import LibraryPanel from './LibraryPanel';
  * SidebarWrapper - Main container for the nested double sidebar system
  * Manages state and coordination between SlimNav and LibraryPanel
  */
-const SidebarWrapper = memo(() => {
-  const [activeSection, setActiveSection] = useState('history'); // Default to library
+const SidebarWrapper = memo(({ onOpenFile, onCreateFile }) => {
+  const [activeSection, setActiveSection] = useState('history'); // Default to node library
   const [isPanelVisible, setIsPanelVisible] = useState(true);
 
   const handleSectionChange = (sectionId) => {
@@ -34,6 +34,8 @@ const SidebarWrapper = memo(() => {
         <LibraryPanel 
           activeSection={activeSection}
           isVisible={isPanelVisible}
+          onOpenFile={onOpenFile}
+          onCreateFile={onCreateFile}
         />
       )}
     </div>

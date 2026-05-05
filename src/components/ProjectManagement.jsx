@@ -22,9 +22,27 @@ function formatTimeAgo(date) {
   return `${days} day${days > 1 ? 's' : ''} ago`
 }
 
-function ProjectCard({ project, onOpen, onDelete }) {
+function ProjectCard({ project, onOpen, onDelete, onRename }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [hovered, setHovered] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedName, setEditedName] = useState(project.name)
+
+  const handleRename = () => {
+    if (editedName.trim() && editedName !== project.name) {
+      onRename(project.id, editedName.trim())
+    }
+    setIsEditing(false)
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleRename()
+    } else if (e.key === 'Escape') {
+      setEditedName(project.name)
+      setIsEditing(false)
+    }
+  }
 
   return (
     <motion.div
@@ -58,11 +76,51 @@ function ProjectCard({ project, onOpen, onDelete }) {
       </div>
 
       {/* Info */}
-      <div onClick={() => onOpen(project)} style={{ padding: '14px 16px', position: 'relative' }}>
+      <div style={{ padding: '14px 16px', position: 'relative' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#fff', margin: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {project.name}
-          </h3>
+          {isEditing ? (
+            <input
+              type="text"
+              value={editedName}
+              onChange={(e) => setEditedName(e.target.value)}
+              onBlur={handleRename}
+              onKeyDown={handleKeyDown}
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                flex: 1,
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#fff',
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(234,97,19,0.5)',
+                borderRadius: '4px',
+                padding: '4px 8px',
+                outline: 'none',
+                fontFamily: 'inherit'
+              }}
+            />
+          ) : (
+            <h3 
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(true);
+              }}
+              style={{ 
+                fontSize: '14px', 
+                fontWeight: 600, 
+                color: '#fff', 
+                margin: 0, 
+                flex: 1, 
+                overflow: 'hidden', 
+                textOverflow: 'ellipsis', 
+                whiteSpace: 'nowrap',
+                cursor: 'text'
+              }}
+            >
+              {project.name}
+            </h3>
+          )}
           
           {/* Menu button */}
           <div style={{ position: 'relative' }}>
@@ -138,7 +196,7 @@ function TemplateCard({ template }) {
       style={{
         minWidth: '280px', maxWidth: '280px',
         background: '#1a1a1c',
-        border: `1px solid ${hovered ? 'rgba(226,255,70,0.3)' : 'rgba(255,255,255,0.08)'}`,
+        border: `1px solid ${hovered ? 'rgba(234,97,19,0.3)' : 'rgba(255,255,255,0.08)'}`,
         borderRadius: '12px', overflow: 'hidden', cursor: 'pointer',
         transition: 'border-color 0.2s',
       }}
@@ -165,6 +223,12 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+
+  // Get workspace name from user data
+  const workspaceName = currentUser?.name || 
+                        currentUser?.email?.split('@')[0] || 
+                        localStorage.getItem('workspace_name') || 
+                        'My Workspace'
 
   // Get user data from useAuth or fallback to localStorage
   const getUserData = () => {
@@ -208,27 +272,67 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
     console.log('LocalStorage token:', localStorage.getItem('office_weave_token'))
   }, [user, authLoading, currentUser])
 
-  // Load workflows from backend
+  // Load workflows from backend - wait for auth to be ready
   useEffect(() => {
-    loadWorkflows()
+    const token = localStorage.getItem('office_weave_token')
+    if (token) {
+      loadWorkflows()
+    } else {
+      setLoading(false)
+      setError('Vui lòng đăng nhập để xem workflows')
+    }
   }, [])
+
+  // Reload when user changes (e.g. after Google OAuth)
+  useEffect(() => {
+    if (user) {
+      loadWorkflows()
+    }
+  }, [user])
 
   const loadWorkflows = async () => {
     try {
       setLoading(true)
+      setError('')
+      console.log('📥 Loading workflows from API...')
+      
+      const token = localStorage.getItem('office_weave_token')
+      if (!token) {
+        setError('Không có token xác thực')
+        return
+      }
+
       const response = await apiClient.getWorkflows({ limit: 50 })
-      const workflows = response.data.workflows.map(workflow => ({
-        id: workflow.id,
-        name: workflow.name || 'Untitled Workflow',
-        thumbnail: null, // TODO: Generate thumbnails
-        lastEdited: new Date(workflow.updated_at).getTime(),
-        description: workflow.description,
-        nodeCount: workflow.nodes?.length || 0
-      }))
+      console.log('📦 API response:', response)
+      
+      const workflowList = response?.data?.workflows || response?.workflows || []
+      
+      const workflows = workflowList.map(workflow => {
+        const nodes = workflow.metadata?.nodes || workflow.nodes || []
+        const edges = workflow.metadata?.edges || workflow.edges || []
+        const thumbnail = workflow.metadata?.thumbnail || null
+
+        return {
+          id: workflow.id,
+          name: workflow.name || 'Untitled Workflow',
+          thumbnail,
+          lastEdited: new Date(workflow.updated_at || workflow.created_at).getTime(),
+          description: workflow.description,
+          nodeCount: nodes.length,
+          nodes,
+          edges
+        }
+      })
+      
+      console.log('✅ Loaded workflows:', workflows.length)
       setProjects(workflows)
     } catch (err) {
-      console.error('Failed to load workflows:', err)
-      setError('Không thể tải workflows')
+      console.error('❌ Failed to load workflows:', err)
+      if (err.message?.includes('401') || err.message?.includes('Unauthorized')) {
+        setError('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.')
+      } else {
+        setError('Không thể tải workflows: ' + err.message)
+      }
     } finally {
       setLoading(false)
     }
@@ -298,6 +402,18 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
     }
   }, [])
 
+  const renameProject = useCallback(async (id, newName) => {
+    try {
+      await apiClient.updateWorkflow(id, { name: newName })
+      setProjects(prev => prev.map(p => 
+        p.id === id ? { ...p, name: newName } : p
+      ))
+    } catch (err) {
+      console.error('Failed to rename workflow:', err)
+      setError('Không thể đổi tên workflow')
+    }
+  }, [])
+
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100vw', background: '#0a0a0c', fontFamily: "'Inter', system-ui, sans-serif", overflow: 'hidden' }}>
       
@@ -317,10 +433,10 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
             onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: '#fff' }}>
-                W
+              <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'linear-gradient(135deg, #EA6113, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: '#fff' }}>
+                {workspaceName.charAt(0).toUpperCase()}
               </div>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>My Workspace</span>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>{workspaceName}</span>
             </div>
             <ChevronDown size={14} style={{ color: 'rgba(255,255,255,0.4)', transform: userMenuOpen ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
           </button>
@@ -344,7 +460,7 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
                 <div style={{ padding: '12px', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'linear-gradient(135deg, #f59e0b, #ef4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 700, color: '#fff' }}>
-                      N
+                      {(currentUser?.email?.charAt(0) || 'U').toUpperCase()}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff', marginBottom: '2px' }}>
@@ -362,7 +478,7 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
                         <span style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>✦ 150</span>
                       </div>
                       <button style={{
-                        fontSize: '11px', color: '#3b82f6', background: 'transparent',
+                        fontSize: '11px', color: '#EA6113', background: 'transparent',
                         border: 'none', cursor: 'pointer', fontWeight: 600,
                         textDecoration: 'underline', padding: 0,
                       }}>
@@ -377,7 +493,7 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: '13px', color: '#fff', fontWeight: 500 }}>Free</span>
                       <button style={{
-                        fontSize: '11px', color: '#3b82f6', background: 'transparent',
+                        fontSize: '11px', color: '#EA6113', background: 'transparent',
                         border: 'none', cursor: 'pointer', fontWeight: 600,
                         textDecoration: 'underline', padding: 0,
                       }}>
@@ -436,7 +552,7 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             style={{
-              width: '100%', padding: '12px', background: '#e2ff46', color: '#050507',
+              width: '100%', padding: '12px', background: '#EA6113', color: '#050507',
               border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))',
@@ -451,20 +567,49 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
         <nav style={{ flex: 1, padding: '0 12px', overflowY: 'auto' }}>
           <div style={{ marginBottom: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', marginBottom: '4px' }}>
-              <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Files</span>
-              <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Files ({projects.length})
+              </span>
+              <button 
+                onClick={createNewProject}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+              >
                 <Plus size={14} style={{ color: 'rgba(255,255,255,0.3)' }} />
               </button>
             </div>
-            <button style={{
-              width: '100%', padding: '10px 12px', background: 'rgba(255,255,255,0.06)',
-              border: 'none', borderRadius: '6px', textAlign: 'left',
-              display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
-              fontSize: '13px', color: '#fff', fontWeight: 500,
-            }}>
-              <Folder size={16} style={{ color: 'rgba(255,255,255,0.6)' }} />
-              My Files
-            </button>
+            
+            {/* Files List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              {projects.slice(0, 10).map(project => (
+                <button 
+                  key={project.id}
+                  onClick={() => onOpenProject(project)}
+                  style={{
+                    width: '100%', padding: '8px 12px', background: 'transparent',
+                    border: 'none', borderRadius: '6px', textAlign: 'left',
+                    display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
+                    fontSize: '12px', color: 'rgba(255,255,255,0.7)', fontWeight: 500,
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <Folder size={14} style={{ color: 'rgba(255,255,255,0.5)', flexShrink: 0 }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {project.name}
+                  </span>
+                </button>
+              ))}
+              
+              {projects.length === 0 && (
+                <div style={{ padding: '20px 12px', textAlign: 'center' }}>
+                  <Folder size={24} style={{ color: 'rgba(255,255,255,0.2)', margin: '0 auto 8px' }} />
+                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', margin: 0 }}>
+                    Chưa có workflow
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
@@ -525,7 +670,7 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
                 ← Back
               </button>
             )}
-            <h1 style={{ fontSize: '20px', fontWeight: 700, color: '#fff', margin: 0 }}>My Workspace</h1>
+            <h1 style={{ fontSize: '20px', fontWeight: 700, color: '#fff', margin: 0 }}>{workspaceName}</h1>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <motion.button
@@ -533,7 +678,7 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               style={{
-                padding: '10px 20px', background: '#e2ff46', color: '#050507',
+                padding: '10px 20px', background: '#EA6113', color: '#050507',
                 border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700,
                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
                 clipPath: 'polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px))',
@@ -547,19 +692,6 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
 
         {/* Content scroll area */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
-          {/* Workflow Library */}
-          <section style={{ marginBottom: '48px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#fff', margin: 0 }}>Workflow Library</h2>
-              <button style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
-                View all →
-              </button>
-            </div>
-            <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
-              {workflowTemplates.map(t => <TemplateCard key={t.id} template={t} />)}
-            </div>
-          </section>
-
           {/* My Files Grid */}
           <section>
             <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#fff', marginBottom: '20px' }}>My Files</h2>
@@ -587,10 +719,34 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
                   width: '32px',
                   height: '32px',
                   border: '2px solid rgba(255,255,255,0.1)',
-                  borderTop: '2px solid #e2ff46',
+                  borderTop: '2px solid #EA6113',
                   borderRadius: '50%',
                   animation: 'spin 1s linear infinite'
                 }} />
+              </div>
+            ) : error ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '60px 20px',
+                color: 'rgba(239,68,68,0.8)',
+                fontSize: '14px'
+              }}>
+                <p>{error}</p>
+                <button
+                  onClick={loadWorkflows}
+                  style={{
+                    marginTop: '16px',
+                    padding: '8px 20px',
+                    background: 'rgba(234,97,19,0.1)',
+                    border: '1px solid rgba(234,97,19,0.3)',
+                    borderRadius: '8px',
+                    color: '#EA6113',
+                    cursor: 'pointer',
+                    fontSize: '13px'
+                  }}
+                >
+                  Thử lại
+                </button>
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
@@ -616,6 +772,7 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
                         project={project}
                         onOpen={onOpenProject}
                         onDelete={deleteProject}
+                        onRename={renameProject}
                       />
                     ))
                   )}

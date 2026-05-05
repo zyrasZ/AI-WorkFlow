@@ -155,9 +155,9 @@ const GhostNode = memo(({ data, selected, id }) => {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3 }}
       className={`
-        relative min-w-[220px] max-w-[280px] rounded-xl border backdrop-blur-md
+        relative min-w-[130px] max-w-[150px] rounded-lg border backdrop-blur-md
         ${statusColors[status]}
-        ${selected ? 'ring-2 ring-blue-400/50 ring-offset-2 ring-offset-black' : ''}
+        ${selected ? 'ring-2 ring-blue-400/50 ring-offset-1 ring-offset-black' : ''}
         ${status === 'running' ? 'animate-pulse' : ''}
         transition-all duration-300 shadow-xl
       `}
@@ -190,11 +190,11 @@ const GhostNode = memo(({ data, selected, id }) => {
 
       {/* Preview Area */}
       {preview && (
-        <div className="p-3 pb-0">
-          <div className="aspect-video bg-black/60 rounded-lg border border-white/10 overflow-hidden relative group">
+        <div className="p-1.5 pb-0">
+          <div className="aspect-video bg-black/60 rounded border border-white/10 overflow-hidden relative group">
             {preview.type === 'image' ? (
               <img 
-                src={preview.url || '/api/placeholder/280/160'} 
+                src={preview.url || '/api/placeholder/140/79'} 
                 alt="Preview"
                 className="w-full h-full object-cover"
               />
@@ -209,16 +209,16 @@ const GhostNode = memo(({ data, selected, id }) => {
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <div className="text-center">
-                  <PillarIcon size={24} className="text-white/40 mx-auto mb-2" />
-                  <p className="text-xs text-white/60">No preview</p>
+                  <PillarIcon size={12} className="text-white/40 mx-auto mb-0.5" />
+                  <p className="text-[8px] text-white/60">No preview</p>
                 </div>
               </div>
             )}
             
             {/* Preview Overlay */}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-              <button className="p-2 bg-black/60 backdrop-blur-sm rounded-full border border-white/20">
-                <Eye size={16} className="text-white" />
+              <button className="p-0.5 bg-black/60 backdrop-blur-sm rounded-full border border-white/20">
+                <Eye size={10} className="text-white" />
               </button>
             </div>
           </div>
@@ -226,34 +226,33 @@ const GhostNode = memo(({ data, selected, id }) => {
       )}
 
       {/* Header */}
-      <div className="p-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center space-x-2 flex-1">
+      <div className="p-1.5">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center space-x-0.5 flex-1">
             {/* Pillar Icon */}
             <div 
-              className="p-1.5 rounded-lg backdrop-blur-sm"
+              className="p-0.5 rounded backdrop-blur-sm"
               style={{ 
                 backgroundColor: `${color}20`, 
                 border: `1px solid ${color}40`,
                 color 
               }}
             >
-              <PillarIcon size={14} />
+              <PillarIcon size={8} />
             </div>
 
             {/* Node Info */}
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-medium text-white truncate">
+              <h3 className="text-[9px] font-medium text-white truncate">
                 {label}
               </h3>
-              {/* Subtitle removed */}
             </div>
           </div>
 
           {/* Status & Actions */}
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center">
             <StatusIcon 
-              size={14} 
+              size={8} 
               className={`
                 ${status === 'running' ? 'text-blue-400 animate-spin' : ''}
                 ${status === 'success' ? 'text-green-400' : ''}
@@ -265,60 +264,50 @@ const GhostNode = memo(({ data, selected, id }) => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={executeProcessor}
-            disabled={isProcessing}
-            className={`
-              flex-1 flex items-center justify-center space-x-1 px-3 py-1.5 text-xs font-medium 
-              ${hasUpdatedInput ? 'bg-yellow-500/20 hover:bg-yellow-500/30 border-yellow-400/40 text-yellow-300' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}
-              disabled:bg-white/5 rounded-lg transition-colors border
-            `}
-          >
-            {isProcessing ? (
-              <>
-                <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" />
-                <span>Running...</span>
-              </>
-            ) : (
-              <>
-                <Play size={12} />
-                <span>{hasUpdatedInput ? 'Run with New Input' : 'Run Model'}</span>
-              </>
-            )}
-          </button>
-        </div>
-        
-        {/* Input Update Indicator */}
-        {hasUpdatedInput && !isProcessing && (
-          <div className="mt-2 flex items-center gap-1.5 text-[10px] text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 rounded-lg px-2 py-1">
-            <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" />
-            <span>Input đã thay đổi - Nhấn Run để cập nhật</span>
-          </div>
-        )}
+        <button
+          onClick={executeProcessor}
+          disabled={isProcessing}
+          className={`
+            w-full flex items-center justify-center space-x-0.5 px-1.5 py-1 text-[8px] font-medium 
+            ${hasUpdatedInput ? 'bg-yellow-500/20 hover:bg-yellow-500/30 border-yellow-400/40 text-yellow-300' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}
+            disabled:bg-white/5 rounded transition-colors border
+          `}
+        >
+          {isProcessing ? (
+            <>
+              <div className="w-1.5 h-1.5 border border-white border-t-transparent rounded-full animate-spin" />
+              <span>Run...</span>
+            </>
+          ) : (
+            <>
+              <Play size={7} />
+              <span>{hasUpdatedInput ? 'Run*' : 'Run'}</span>
+            </>
+          )}
+        </button>
       </div>
 
       {/* Expanded Content - REMOVED */}
 
       {/* Result Display */}
       {displayResult && (
-        <div className="border-t border-white/10 p-3">
-          <div className="space-y-2">
+        <div className="border-t border-white/10 p-1.5">
+          <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-white/70">Kết quả</span>
+              <span className="text-[8px] font-semibold text-white/70">Result</span>
               <button
                 onClick={() => {
                   const text = displayResult.response || displayResult.generated || displayResult.findings || displayResult.strategy || '';
                   if (text) navigator.clipboard.writeText(text);
                 }}
-                className="text-[10px] text-white/40 hover:text-white/70 px-1.5 py-0.5 rounded border border-white/10 hover:border-white/20 transition-colors"
+                className="text-[7px] text-white/40 hover:text-white/70 px-0.5 py-0.5 rounded border border-white/10 hover:border-white/20 transition-colors"
               >
                 Copy
               </button>
             </div>
 
             <div
-              className="p-3 bg-black/50 border border-white/10 rounded-lg max-h-[240px] overflow-y-auto text-xs leading-relaxed"
+              className="p-1.5 bg-black/50 border border-white/10 rounded max-h-[100px] overflow-y-auto text-[8px] leading-relaxed"
               style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}
             >
               {displayResult.response && (
@@ -342,23 +331,22 @@ const GhostNode = memo(({ data, selected, id }) => {
             </div>
 
             {displayResult.usage?.total_tokens && (
-              <div className="flex items-center justify-between text-[10px] text-white/30">
-                <span>{displayResult.usage.total_tokens} tokens</span>
-                {displayResult.model && <span className="font-mono">{displayResult.model}</span>}
+              <div className="text-[7px] text-white/30">
+                {displayResult.usage.total_tokens}t
               </div>
             )}
           </div>
-        </div>
+        </div> 
       )}
 
       {/* Pillar Badge - REMOVED */}
 
       {/* Processing Overlay */}
       {status === 'running' && (
-        <div className="absolute inset-0 bg-blue-500/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
+        <div className="absolute inset-0 bg-blue-500/10 rounded-lg flex items-center justify-center backdrop-blur-sm">
           <div className="text-center">
-            <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-            <p className="text-xs text-blue-400">Processing...</p>
+            <div className="w-4 h-4 border border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-0.5" />
+            <p className="text-[8px] text-blue-400">Processing...</p>
           </div>
         </div>
       )}

@@ -2,8 +2,10 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import LandingPage from './components/LandingPage'
 import SignIn from './components/SignIn'
+import SignUp from './components/SignUp'
 import ProjectManagement from './components/ProjectManagement'
 import Settings from './components/Settings'
+import Documentation from './components/Documentation'
 import ReactFlow, {
   useNodesState,
   useEdgesState,
@@ -15,12 +17,39 @@ import GhostNode from './components/GhostNode'
 import PromptNode from './components/PromptNode'
 import OutputNode from './components/OutputNode'
 import NeonEdge from './components/NeonEdge'
-import PropertiesPanel from './components/PropertiesPanel'
 import FigmaWeaveBackground from './components/FigmaWeaveBackground'
 import DebugInfo from './components/DebugInfo'
 import nodeRegistry from './registry/NodeRegistry.js'
 import engine from './engine/Engine.js'
 import { useCanvasLogic } from './hooks/useCanvasLogic.js'
+import { apiClient } from './lib/api.js'
+
+// Page Transition Variants
+const pageVariants = {
+  initial: { 
+    opacity: 0, 
+    scale: 0.98,
+    filter: 'blur(10px)'
+  },
+  animate: { 
+    opacity: 1, 
+    scale: 1,
+    filter: 'blur(0px)',
+    transition: {
+      duration: 0.5,
+      ease: [0.16, 1, 0.3, 1]
+    }
+  },
+  exit: { 
+    opacity: 0, 
+    scale: 1.02,
+    filter: 'blur(10px)',
+    transition: {
+      duration: 0.3,
+      ease: [0.16, 1, 0.3, 1]
+    }
+  }
+}
 
 const nodeTypes = { 
   ghostNode: GhostNode,
@@ -40,17 +69,79 @@ export default function App() {
   
   const [showLanding, setShowLanding] = useState(!hasAuthToken)
   const [showSignIn, setShowSignIn] = useState(false)
+  const [showSignUp, setShowSignUp] = useState(false)
   const [showProjectManagement, setShowProjectManagement] = useState(!!hasAuthToken)
   const [showSettings, setShowSettings] = useState(false)
+  const [showDocumentation, setShowDocumentation] = useState(false)
   const [currentProject, setCurrentProject] = useState(null)
   const [navigationHistory, setNavigationHistory] = useState(hasAuthToken ? ['projects'] : ['landing'])
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
-  const [selectedNode, setSelectedNode] = useState(null)
   const [isExecuting, setIsExecuting] = useState(false)
   const [executionProgress, setExecutionProgress] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [lastSaved, setLastSaved] = useState(null)
+  const [projectManagementKey, setProjectManagementKey] = useState(0)
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [editedTitle, setEditedTitle] = useState('')
   const reactFlowWrapper = useRef(null)
   const [reactFlowInstance, setReactFlowInstance] = useState(null)
+  const saveTimeoutRef = useRef(null)
+
+  // ✅ Handle Google OAuth callback at App level
+  // Backend redirects to: /?access_token=xxx or /?message=error
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const accessToken = params.get('access_token')
+    const errorMsg = params.get('message')
+
+    if (!accessToken && !errorMsg) return
+
+    if (accessToken) {
+      console.log('✅ Google OAuth callback detected, processing token...')
+      localStorage.setItem('office_weave_token', accessToken)
+      window.history.replaceState({}, '', window.location.pathname)
+
+      const API_BASE = import.meta.env.VITE_API_URL || 'https://back-end-auto-office-f8xt.vercel.app'
+      fetch(`${API_BASE}/api/auth/user`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success || data.data) {
+            const userData = data.data || data
+            localStorage.setItem('user_data', JSON.stringify(userData))
+            console.log('✅ Google login successful, navigating to projects')
+            setShowLanding(false)
+            setShowSignIn(false)
+            setShowSignUp(false)
+            setShowProjectManagement(true)
+            setProjectManagementKey(k => k + 1)
+            setNavigationHistory(['projects'])
+            window.history.replaceState({ page: 'projects' }, '', '#/projects')
+          } else {
+            console.error('Failed to get user info:', data)
+            localStorage.removeItem('office_weave_token')
+            setShowLanding(false)
+            setShowSignIn(true)
+          }
+        })
+        .catch(err => {
+          console.error('OAuth user fetch error:', err)
+          localStorage.removeItem('office_weave_token')
+          setShowLanding(false)
+          setShowSignIn(true)
+        })
+    } else if (errorMsg) {
+      console.error('OAuth error:', errorMsg)
+      window.history.replaceState({}, '', window.location.pathname)
+      // Show sign in page - setState in async callback is fine
+      setTimeout(() => {
+        setShowLanding(false)
+        setShowSignIn(true)
+      }, 0)
+    }
+  }, []) // Run once on mount
 
   // Sync results to connected nodes when a new connection is made
   const handleConnectionMade = useCallback((sourceNodeId, targetNodeId) => {
@@ -88,140 +179,6 @@ export default function App() {
     setEdges, 
     onConnectionMade: handleConnectionMade 
   })
-
-  // Handle sign in
-  const handleSignIn = useCallback(() => {
-    // Token is already stored by apiClient.login in api.js
-    // Just update UI state
-    setShowSignIn(false)
-    setShowProjectManagement(true)
-    setNavigationHistory(['projects'])
-    window.history.replaceState({ page: 'projects' }, '', '#/projects')
-  }, [])
-
-  // Handle logout
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem('auth_token')
-    setShowProjectManagement(false)
-    setShowLanding(true)
-    setCurrentProject(null)
-    setNavigationHistory(['landing'])
-    window.history.pushState({ page: 'landing' }, '', '#/')
-  }, [])
-
-  // Navigate from landing to sign in
-  const navigateToSignIn = useCallback(() => {
-    setShowLanding(false)
-    setShowSignIn(true)
-    setNavigationHistory(prev => [...prev, 'signin'])
-    window.history.pushState({ page: 'signin' }, '', '#/signin')
-  }, [])
-
-  // Navigate to settings
-  const navigateToSettings = useCallback(() => {
-    setShowProjectManagement(false)
-    setShowSettings(true)
-    setCurrentProject(null)
-    setNavigationHistory(prev => [...prev, 'settings'])
-    window.history.pushState({ page: 'settings' }, '', '#/settings')
-  }, [])
-
-  // Sync with browser history
-  useEffect(() => {
-    // Set initial landing page state
-    if (!window.history.state) {
-      window.history.replaceState({ page: 'landing' }, '', '#/')
-    }
-
-    const handlePopState = (e) => {
-      if (e.state?.page) {
-        const page = e.state.page
-        if (page === 'landing') {
-          setShowLanding(true)
-          setShowSignIn(false)
-          setShowProjectManagement(false)
-          setShowSettings(false)
-          setCurrentProject(null)
-          setNavigationHistory(['landing'])
-        } else if (page === 'signin') {
-          setShowLanding(false)
-          setShowSignIn(true)
-          setShowProjectManagement(false)
-          setShowSettings(false)
-          setCurrentProject(null)
-          setNavigationHistory(['landing', 'signin'])
-        } else if (page === 'projects') {
-          setShowLanding(false)
-          setShowSignIn(false)
-          setShowProjectManagement(true)
-          setShowSettings(false)
-          setCurrentProject(null)
-          setNavigationHistory(prev => {
-            // Rebuild history up to projects
-            const projectsIndex = prev.indexOf('projects')
-            if (projectsIndex >= 0) {
-              return prev.slice(0, projectsIndex + 1)
-            }
-            return ['landing', 'projects']
-          })
-        } else if (page === 'settings') {
-          setShowLanding(false)
-          setShowSignIn(false)
-          setShowProjectManagement(false)
-          setShowSettings(true)
-          setCurrentProject(null)
-          setNavigationHistory(['landing', 'projects', 'settings'])
-        } else if (page === 'canvas') {
-          setShowLanding(false)
-          setShowSignIn(false)
-          setShowProjectManagement(false)
-          setShowSettings(false)
-          setNavigationHistory(['landing', 'projects', 'canvas'])
-          // currentProject already set
-        }
-      }
-    }
-
-    window.addEventListener('popstate', handlePopState)
-    return () => window.removeEventListener('popstate', handlePopState)
-  }, [])
-
-  // Navigation helpers
-  const navigateToCanvas = useCallback((project) => {
-    setCurrentProject(project)
-    setNavigationHistory(prev => [...prev, 'canvas'])
-    window.history.pushState({ page: 'canvas', projectId: project.id }, '', `#/project/${project.id}`)
-  }, [])
-
-  const navigateBack = useCallback(() => {
-    window.history.back()
-  }, [])
-
-  // Setup engine callbacks
-  engine.onNodeStatusChange((nodeId, status) => {
-    setNodes(nds => nds.map(node => 
-      node.id === nodeId 
-        ? { ...node, data: { ...node.data, status } }
-        : node
-    ));
-
-    // Update edge animations for success states
-    if (status === 'success') {
-      setEdges(eds => eds.map(edge => 
-        edge.source === nodeId 
-          ? { ...edge, data: { ...edge.data, success: true, animated: true } }
-          : edge
-      ));
-    }
-  });
-
-  const onNodeClick = useCallback((_, node) => {
-    setSelectedNode(node)
-  }, [])
-
-  const onPaneClick = useCallback(() => {
-    setSelectedNode(null)
-  }, [])
 
   // Handle node data changes (for PromptNode)
   const handleNodeDataChange = useCallback((nodeId, newData) => {
@@ -339,6 +296,496 @@ export default function App() {
       ));
     }, 2000);
   }, [reactFlowInstance, edges, setNodes, setEdges]);
+
+  // Handle sign in
+  const handleSignIn = useCallback(() => {
+    // Token is already stored by apiClient.login in api.js
+    // Just update UI state
+    console.log('✅ Sign in successful, navigating to project management')
+    setShowSignIn(false)
+    setShowSignUp(false)
+    setShowLanding(false)
+    setShowProjectManagement(true)
+    setProjectManagementKey(k => k + 1) // Force re-mount to reload data
+    setNavigationHistory(['projects'])
+    window.history.replaceState({ page: 'projects' }, '', '#/projects')
+  }, [])
+
+  // Handle logout
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('auth_token')
+    setShowProjectManagement(false)
+    setShowLanding(true)
+    setCurrentProject(null)
+    setNavigationHistory(['landing'])
+    window.history.pushState({ page: 'landing' }, '', '#/')
+  }, [])
+
+  // Navigate from landing to sign in
+  const navigateToSignIn = useCallback(() => {
+    setShowLanding(false)
+    setShowSignIn(true)
+    setShowSignUp(false)
+    setNavigationHistory(prev => [...prev, 'signin'])
+    window.history.pushState({ page: 'signin' }, '', '#/signin')
+  }, [])
+
+  // Navigate from sign in to sign up
+  const navigateToSignUp = useCallback(() => {
+    setShowSignIn(false)
+    setShowSignUp(true)
+    setNavigationHistory(prev => [...prev, 'signup'])
+    window.history.pushState({ page: 'signup' }, '', '#/signup')
+  }, [])
+
+  // Navigate from sign up to sign in
+  const navigateBackToSignIn = useCallback(() => {
+    setShowSignUp(false)
+    setShowSignIn(true)
+    setNavigationHistory(prev => [...prev, 'signin'])
+    window.history.pushState({ page: 'signin' }, '', '#/signin')
+  }, [])
+
+  // Navigate to settings
+  const navigateToSettings = useCallback(() => {
+    setShowProjectManagement(false)
+    setShowSettings(true)
+    setShowDocumentation(false)
+    setCurrentProject(null)
+    setNavigationHistory(prev => [...prev, 'settings'])
+    window.history.pushState({ page: 'settings' }, '', '#/settings')
+  }, [])
+
+  // Navigate to documentation
+  const navigateToDocumentation = useCallback(() => {
+    setShowLanding(false)
+    setShowProjectManagement(false)
+    setShowSettings(false)
+    setShowDocumentation(true)
+    setCurrentProject(null)
+    setNavigationHistory(prev => [...prev, 'docs'])
+    window.history.pushState({ page: 'docs' }, '', '#/docs')
+  }, [])
+
+  // Sync with browser history
+  useEffect(() => {
+    // Set initial landing page state
+    if (!window.history.state) {
+      window.history.replaceState({ page: 'landing' }, '', '#/')
+    }
+
+    const handlePopState = (e) => {
+      if (e.state?.page) {
+        const page = e.state.page
+        if (page === 'landing') {
+          setShowLanding(true)
+          setShowSignIn(false)
+          setShowProjectManagement(false)
+          setShowSettings(false)
+          setShowDocumentation(false)
+          setCurrentProject(null)
+          setNavigationHistory(['landing'])
+        } else if (page === 'signin') {
+          setShowLanding(false)
+          setShowSignIn(true)
+          setShowProjectManagement(false)
+          setShowSettings(false)
+          setShowDocumentation(false)
+          setCurrentProject(null)
+          setNavigationHistory(['landing', 'signin'])
+        } else if (page === 'projects') {
+          setShowLanding(false)
+          setShowSignIn(false)
+          setShowProjectManagement(true)
+          setShowSettings(false)
+          setShowDocumentation(false)
+          setCurrentProject(null)
+          setNavigationHistory(prev => {
+            // Rebuild history up to projects
+            const projectsIndex = prev.indexOf('projects')
+            if (projectsIndex >= 0) {
+              return prev.slice(0, projectsIndex + 1)
+            }
+            return ['landing', 'projects']
+          })
+        } else if (page === 'settings') {
+          setShowLanding(false)
+          setShowSignIn(false)
+          setShowProjectManagement(false)
+          setShowSettings(true)
+          setShowDocumentation(false)
+          setCurrentProject(null)
+          setNavigationHistory(['landing', 'projects', 'settings'])
+        } else if (page === 'docs') {
+          setShowLanding(false)
+          setShowSignIn(false)
+          setShowProjectManagement(false)
+          setShowSettings(false)
+          setShowDocumentation(true)
+          setCurrentProject(null)
+          setNavigationHistory(['landing', 'docs'])
+        } else if (page === 'canvas') {
+          setShowLanding(false)
+          setShowSignIn(false)
+          setShowProjectManagement(false)
+          setShowSettings(false)
+          setShowDocumentation(false)
+          setNavigationHistory(['landing', 'projects', 'canvas'])
+          // Note: currentProject should already be set, but if not, we need to reload it
+          if (e.state?.projectId && !currentProject) {
+            // Reload project data
+            apiClient.getWorkflow(e.state.projectId).then(response => {
+              const project = {
+                id: response.data.id,
+                name: response.data.name,
+                description: response.data.description,
+                nodes: response.data.nodes || [],
+                edges: response.data.edges || []
+              };
+              setCurrentProject(project);
+              
+              // Restore nodes with callbacks
+              if (project.nodes && project.nodes.length > 0) {
+                const restoredNodes = project.nodes.map(node => ({
+                  ...node,
+                  data: {
+                    ...node.data,
+                    onDataChange: handleNodeDataChange,
+                    onNodeResult: handleNodeResult,
+                    getNodes: () => reactFlowInstance?.getNodes() || [],
+                    getEdges: () => reactFlowInstance?.getEdges() || [],
+                  }
+                }));
+                setNodes(restoredNodes);
+              }
+              
+              if (project.edges) {
+                setEdges(project.edges);
+              }
+            }).catch(err => {
+              console.error('Failed to reload project:', err);
+            });
+          }
+        }
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [currentProject, handleNodeDataChange, handleNodeResult, reactFlowInstance, setEdges, setNodes])
+
+  // Navigation helpers
+  const navigateToCanvas = useCallback(async (project) => {
+    console.log('🚀 Opening project:', project);
+    
+    setCurrentProject(project)
+    setNavigationHistory(prev => [...prev, 'canvas'])
+    window.history.pushState({ page: 'canvas', projectId: project.id }, '', `#/project/${project.id}`)
+    
+    // ALWAYS load full project data from API to get nodes/edges
+    console.log('📥 Loading full project data from API...');
+    try {
+      const response = await apiClient.getWorkflow(project.id);
+      console.log('📦 Full API response:', JSON.stringify(response, null, 2));
+      
+      const workflow = response.data;
+      
+      // Backend stores nodes/edges in metadata
+      const nodes = workflow.metadata?.nodes || 
+                   workflow.nodes || 
+                   workflow.data?.nodes || 
+                   [];
+      
+      const edges = workflow.metadata?.edges || 
+                   workflow.edges || 
+                   workflow.data?.edges || 
+                   [];
+      
+      console.log('✅ Loaded project data:', {
+        nodeCount: nodes.length,
+        edgeCount: edges.length,
+        nodes: nodes,
+        edges: edges
+      });
+      
+      // Restore nodes with callbacks
+      if (nodes && nodes.length > 0) {
+        console.log('🔄 Restoring nodes...');
+        const restoredNodes = nodes.map(node => ({
+          ...node,
+          data: {
+            ...node.data,
+            onDataChange: handleNodeDataChange,
+            onNodeResult: handleNodeResult,
+            getNodes: () => reactFlowInstance?.getNodes() || [],
+            getEdges: () => reactFlowInstance?.getEdges() || [],
+          }
+        }));
+        setNodes(restoredNodes);
+        console.log('✅ Restored nodes:', restoredNodes.length, restoredNodes);
+      } else {
+        setNodes([]);
+        console.log('⚠️ No nodes to restore');
+      }
+      
+      // Restore edges
+      if (edges && edges.length > 0) {
+        setEdges(edges);
+        console.log('✅ Restored edges:', edges.length);
+      } else {
+        setEdges([]);
+        console.log('⚠️ No edges to restore');
+      }
+    } catch (error) {
+      console.error('❌ Failed to load project data:', error);
+      setNodes([]);
+      setEdges([]);
+    }
+  }, [setNodes, setEdges, handleNodeDataChange, handleNodeResult, reactFlowInstance])
+
+  const navigateBack = useCallback(() => {
+    window.history.back()
+  }, [])
+
+  // Rename project title
+  const handleRenameProject = useCallback(async (newName) => {
+    if (!currentProject || !newName.trim()) return;
+    
+    try {
+      await apiClient.updateWorkflow(currentProject.id, { name: newName.trim() });
+      setCurrentProject(prev => ({ ...prev, name: newName.trim() }));
+      console.log('✅ Project renamed successfully');
+    } catch (error) {
+      console.error('❌ Failed to rename project:', error);
+      alert('Không thể đổi tên project');
+    }
+  }, [currentProject]);
+
+  const startEditingTitle = useCallback(() => {
+    if (currentProject) {
+      setEditedTitle(currentProject.name);
+      setIsEditingTitle(true);
+    }
+  }, [currentProject]);
+
+  const finishEditingTitle = useCallback(() => {
+    if (editedTitle.trim() && editedTitle !== currentProject?.name) {
+      handleRenameProject(editedTitle);
+    }
+    setIsEditingTitle(false);
+  }, [editedTitle, currentProject, handleRenameProject]);
+
+  const handleTitleKeyDown = useCallback((e) => {
+    if (e.key === 'Enter') {
+      finishEditingTitle();
+    } else if (e.key === 'Escape') {
+      setIsEditingTitle(false);
+      setEditedTitle(currentProject?.name || '');
+    }
+  }, [finishEditingTitle, currentProject]);
+
+  // Generate thumbnail from canvas
+  const generateThumbnail = useCallback(async () => {
+    if (!reactFlowInstance) {
+      console.log('⚠️ No reactFlowInstance for thumbnail');
+      return null;
+    }
+    
+    try {
+      const nodes = reactFlowInstance.getNodes();
+      
+      if (nodes.length === 0) {
+        console.log('⚠️ No nodes to generate thumbnail');
+        return null;
+      }
+      
+      console.log('📸 Generating thumbnail for', nodes.length, 'nodes');
+      
+      // Try to use React Flow's toObject to get viewport
+      const flowObject = reactFlowInstance.toObject();
+      console.log('📦 Flow object:', flowObject);
+      
+      // Create canvas for thumbnail
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 240;
+      const ctx = canvas.getContext('2d');
+      
+      // Draw background
+      ctx.fillStyle = '#0a0a0c';
+      ctx.fillRect(0, 0, 400, 240);
+      
+      // Calculate bounds of all nodes
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      nodes.forEach(node => {
+        minX = Math.min(minX, node.position.x);
+        minY = Math.min(minY, node.position.y);
+        maxX = Math.max(maxX, node.position.x + 200);
+        maxY = Math.max(maxY, node.position.y + 100);
+      });
+      
+      const width = maxX - minX;
+      const height = maxY - minY;
+      const scale = Math.min(350 / width, 200 / height, 1);
+      const offsetX = (400 - width * scale) / 2 - minX * scale;
+      const offsetY = (240 - height * scale) / 2 - minY * scale;
+      
+      // Draw nodes
+      nodes.forEach(node => {
+        const x = node.position.x * scale + offsetX;
+        const y = node.position.y * scale + offsetY;
+        const w = 40 * scale;
+        const h = 30 * scale;
+        
+        // Draw node
+        ctx.fillStyle = node.data.color || '#3b82f6';
+        ctx.globalAlpha = 0.3;
+        ctx.fillRect(x, y, w, h);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = node.data.color || '#3b82f6';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, w, h);
+      });
+      
+      const thumbnail = canvas.toDataURL('image/png');
+      console.log('✅ Thumbnail generated, size:', thumbnail.length, 'bytes');
+      return thumbnail;
+    } catch (error) {
+      console.error('❌ Failed to generate thumbnail:', error);
+      return null;
+    }
+  }, [reactFlowInstance]);
+
+  // Auto-save project when nodes or edges change
+  const saveProject = useCallback(async () => {
+    if (!currentProject || !currentProject.id) {
+      console.log('⚠️ No project to save:', { currentProject });
+      return;
+    }
+
+    console.log('💾 Starting save process...');
+    console.log('   Current nodes:', nodes.length);
+    console.log('   Current edges:', edges.length);
+
+    setIsSaving(true);
+    
+    try {
+      // Generate thumbnail
+      const thumbnail = await generateThumbnail();
+      
+      // Serialize nodes without callbacks
+      const serializedNodes = nodes.map(node => ({
+        id: node.id,
+        type: node.type,
+        position: node.position,
+        data: {
+          ...node.data,
+          // Remove callbacks before saving
+          onDataChange: undefined,
+          onNodeResult: undefined,
+          getNodes: undefined,
+          getEdges: undefined,
+        }
+      }));
+
+      const projectData = {
+        name: currentProject.name,
+        description: currentProject.description || '',
+        // Store nodes/edges in metadata (backend seems to use this)
+        metadata: {
+          ...currentProject.metadata,
+          nodes: serializedNodes,
+          edges: edges,
+          thumbnail: thumbnail,
+          lastModified: new Date().toISOString(),
+          nodeCount: nodes.length,
+          edgeCount: edges.length
+        }
+      };
+
+      console.log('💾 Saving project data:', {
+        projectId: currentProject.id,
+        nodeCount: serializedNodes.length,
+        edgeCount: edges.length,
+        hasThumbnail: !!thumbnail
+      });
+      
+      const response = await apiClient.updateWorkflow(currentProject.id, projectData);
+      console.log('✅ Save response:', response);
+      
+      setLastSaved(new Date());
+      console.log('✅ Project saved successfully at', new Date().toLocaleTimeString());
+    } catch (error) {
+      console.error('❌ Failed to save project:', error);
+      console.error('   Error details:', error.message);
+      // Don't show alert to avoid interrupting user workflow
+    } finally {
+      setIsSaving(false);
+    }
+  }, [currentProject, nodes, edges, generateThumbnail]);
+
+  // Debounced auto-save: save 2 seconds after last change
+  useEffect(() => {
+    if (!currentProject || nodes.length === 0) return;
+
+    // Clear previous timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Set new timeout
+    saveTimeoutRef.current = setTimeout(() => {
+      saveProject();
+    }, 2000); // 2 seconds debounce
+
+    // Cleanup
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [nodes, edges, currentProject, saveProject]);
+
+  // Manual save with Ctrl+S
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (currentProject) {
+          saveProject();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentProject, saveProject]);
+
+  // Setup engine callbacks
+  engine.onNodeStatusChange((nodeId, status) => {
+    setNodes(nds => nds.map(node => 
+      node.id === nodeId 
+        ? { ...node, data: { ...node.data, status } }
+        : node
+    ));
+
+    // Update edge animations for success states
+    if (status === 'success') {
+      setEdges(eds => eds.map(edge => 
+        edge.source === nodeId 
+          ? { ...edge, data: { ...edge.data, success: true, animated: true } }
+          : edge
+      ));
+    }
+  });
+
+  const onNodeClick = useCallback(() => {
+    // Node click handler - currently not used but kept for future features
+  }, [])
+
+  const onPaneClick = useCallback(() => {
+    // Pane click handler - currently not used but kept for future features
+  }, [])
 
   // Execute workflow with REAL API integration
   const handleRunWorkflow = async () => {
@@ -546,7 +993,7 @@ export default function App() {
     } catch (error) {
       console.error('Error parsing drag data:', error);
     }
-  }, [reactFlowInstance, setNodes])
+  }, [reactFlowInstance, setNodes, handleNodeDataChange, handleNodeResult])
 
   return (
     <>
@@ -554,12 +1001,28 @@ export default function App() {
         {showLanding && (
           <motion.div
             key="landing"
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 1.03 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
             style={{ position: 'absolute', inset: 0, zIndex: 100, overflowY: 'auto', overflowX: 'hidden' }}
           >
-            <LandingPage onEnter={navigateToSignIn} />
+            <LandingPage onEnter={navigateToSignIn} onNavigateToDocs={navigateToDocumentation} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence mode="wait">
+        {showDocumentation && (
+          <motion.div
+            key="documentation"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            style={{ position: 'absolute', inset: 0, zIndex: 95, overflowY: 'auto', overflowX: 'hidden' }}
+          >
+            <Documentation onBack={navigateBack} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -568,13 +1031,28 @@ export default function App() {
         {showSignIn && (
           <motion.div
             key="signin"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
             style={{ position: 'absolute', inset: 0, zIndex: 95 }}
           >
-            <SignIn onSignIn={handleSignIn} />
+            <SignIn onSignIn={handleSignIn} onNavigateToSignUp={navigateToSignUp} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence mode="wait">
+        {showSignUp && (
+          <motion.div
+            key="signup"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            style={{ position: 'absolute', inset: 0, zIndex: 95 }}
+          >
+            <SignUp onSignUp={handleSignIn} onNavigateToSignIn={navigateBackToSignIn} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -590,6 +1068,7 @@ export default function App() {
             style={{ position: 'absolute', inset: 0, zIndex: 90 }}
           >
             <ProjectManagement 
+              key={projectManagementKey}
               onOpenProject={navigateToCanvas}
               onBack={navigationHistory.length > 1 ? navigateBack : null}
               onLogout={handleLogout}
@@ -615,30 +1094,108 @@ export default function App() {
       </AnimatePresence>
 
       <div className="flex flex-col h-screen w-screen overflow-hidden" style={{ background: '#0a0a0c' }}>
-      {/* Top Right Status Bar */}
-      <div className="absolute top-4 right-4 z-50 flex items-center space-x-3">
-        {(currentProject || showProjectManagement) && navigationHistory.length > 1 && (
-          <button
-            onClick={navigateBack}
-            className="px-3 py-1.5 bg-black/60 backdrop-blur-sm border border-white/10 rounded-lg text-xs text-white/80 hover:bg-white/5 transition-colors"
-          >
-            ← Back
-          </button>
-        )}
-        <div className="flex items-center space-x-2 px-3 py-1.5 bg-black/60 backdrop-blur-sm border border-white/10 rounded-lg">
-          <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
-          <span className="text-xs text-white/80">Credits: 247</span>
+      
+      {/* Top Bar - Full Width */}
+      <div className="h-14 bg-black/40 backdrop-blur-sm border-b border-white/10 flex items-center justify-between px-4 z-50">
+        {/* Left - Project Title */}
+        <div className="flex items-center space-x-3">
+          {(currentProject || showProjectManagement) && navigationHistory.length > 1 && (
+            <button
+              onClick={navigateBack}
+              className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs text-white/80 transition-colors"
+            >
+              ← Back
+            </button>
+          )}
+          
+          {currentProject && (
+            isEditingTitle ? (
+              <input
+                type="text"
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                onBlur={finishEditingTitle}
+                onKeyDown={handleTitleKeyDown}
+                autoFocus
+                className="px-3 py-1.5 bg-white/5 border border-blue-400/50 rounded-lg text-sm font-semibold text-white outline-none"
+                style={{ minWidth: '200px' }}
+              />
+            ) : (
+              <button
+                onClick={startEditingTitle}
+                className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-semibold text-white transition-colors"
+              >
+                {currentProject.name}
+              </button>
+            )
+          )}
         </div>
-        <button className="px-3 py-1.5 bg-black/60 backdrop-blur-sm border border-white/10 rounded-lg text-xs text-white/80 hover:bg-white/5 transition-colors">
-          Share
-        </button>
-        <button className="px-3 py-1.5 bg-black/60 backdrop-blur-sm border border-white/10 rounded-lg text-xs text-white/80 hover:bg-white/5 transition-colors">
-          Tasks (2)
-        </button>
+        
+        {/* Right - Status indicators */}
+        <div className="flex items-center space-x-3">
+          {/* Auto-save indicator */}
+          {currentProject && (
+            <div className="flex items-center space-x-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg">
+              {isSaving ? (
+                <>
+                  <div className="w-2 h-2 border border-blue-400 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs text-blue-400">Đang lưu...</span>
+                </>
+              ) : lastSaved ? (
+                <>
+                  <div className="w-2 h-2 bg-green-400 rounded-full" />
+                  <span className="text-xs text-white/60">
+                    Đã lưu {new Date(lastSaved).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <div className="w-2 h-2 bg-white/30 rounded-full" />
+                  <span className="text-xs text-white/40">Chưa lưu</span>
+                </>
+              )}
+            </div>
+          )}
+          
+          <div className="flex items-center space-x-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg">
+            <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
+            <span className="text-xs text-white/80">Credits: 247</span>
+          </div>
+          
+          <button className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs text-white/80 transition-colors">
+            Share
+          </button>
+          
+          <button className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs text-white/80 transition-colors">
+            Tasks (2)
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        <SidebarWrapper />
+        <SidebarWrapper 
+          onOpenFile={navigateToCanvas}
+          onCreateFile={async () => {
+            try {
+              const newWorkflow = {
+                name: 'Untitled Workflow',
+                description: 'New workflow',
+                metadata: { nodes: [], edges: [], nodeCount: 0, edgeCount: 0 }
+              };
+              const response = await apiClient.createWorkflow(newWorkflow);
+              const project = {
+                id: response.data.id,
+                name: response.data.name,
+                nodes: [],
+                edges: []
+              };
+              navigateToCanvas(project);
+            } catch (err) {
+              console.error('Failed to create workflow:', err);
+              alert('Không thể tạo workflow mới');
+            }
+          }}
+        />
 
         {/* Main Canvas */}
         <div className="flex-1 relative" ref={reactFlowWrapper}>
@@ -670,11 +1227,12 @@ export default function App() {
             snapGrid={[30, 30]}
             deleteKeyCode={['Delete', 'Backspace']}
             panOnScroll={true}
-            panOnScrollMode="vertical"
+            panOnScrollMode="free"
             zoomOnScroll={false}
             zoomOnPinch={true}
-            panOnDrag={false}
+            panOnDrag={[1, 2]}
             selectionOnDrag={true}
+            selectionMode="partial"
             zoomActivationKeyCode="Control"
             fitView
             fitViewOptions={{ padding: 0.2 }}

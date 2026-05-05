@@ -133,7 +133,7 @@ const OutputNode = memo(({ data, selected, id }) => {
           : '0 0 0 0px transparent'
       }}
       transition={{ duration: 0.25 }}
-      className={`relative w-[340px] rounded-2xl border backdrop-blur-md shadow-2xl transition-all duration-300
+      className={`relative w-[140px] rounded-lg border backdrop-blur-md shadow-2xl transition-all duration-300
         ${statusBorder[status] || 'border-white/15'}
         ${selected ? 'ring-2 ring-yellow-400/40 ring-offset-1 ring-offset-black' : ''}
         ${isUpdating ? 'border-green-400/60' : ''}
@@ -149,44 +149,44 @@ const OutputNode = memo(({ data, selected, id }) => {
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg" style={{ background: `${color}20`, border: `1px solid ${color}40` }}>
-            <FileText size={13} style={{ color }} />
+      <div className="flex items-center justify-between px-1.5 py-1.5 border-b border-white/8">
+        <div className="flex items-center gap-1">
+          <div className="p-0.5 rounded" style={{ background: `${color}20`, border: `1px solid ${color}40` }}>
+            <FileText size={8} style={{ color }} />
           </div>
-          <span className="text-sm font-semibold text-white">{label}</span>
+          <span className="text-[10px] font-semibold text-white truncate">{label}</span>
           {status === 'success' && responseText && (
-            <span className="flex items-center gap-1 text-[10px] text-green-400 bg-green-400/10 border border-green-400/20 rounded-full px-2 py-0.5">
-              <Sparkles size={9} /> Có kết quả
+            <span className="flex items-center gap-0.5 text-[7px] text-green-400 bg-green-400/10 border border-green-400/20 rounded-full px-1 py-0.5">
+              <Sparkles size={6} />
             </span>
           )}
           {resultHistory.length > 1 && (
-            <span className="flex items-center gap-1 text-[10px] text-blue-400 bg-blue-400/10 border border-blue-400/20 rounded-full px-2 py-0.5">
-              {resultHistory.length} updates
+            <span className="text-[7px] text-blue-400 bg-blue-400/10 border border-blue-400/20 rounded-full px-1 py-0.5">
+              {resultHistory.length}
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {responseText && (
             <button
               onClick={handleCopy}
-              className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
-              title="Sao chép"
+              className="p-0.5 rounded hover:bg-white/10 transition-colors"
+              title="Copy"
             >
               {copied
-                ? <CheckCircle size={13} className="text-green-400" />
-                : <Copy size={13} className="text-white/50 hover:text-white/80" />
+                ? <CheckCircle size={8} className="text-green-400" />
+                : <Copy size={8} className="text-white/50 hover:text-white/80" />
               }
             </button>
           )}
           <button
             onClick={() => setCollapsed(v => !v)}
-            className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+            className="p-0.5 rounded hover:bg-white/10 transition-colors"
           >
             {collapsed
-              ? <ChevronDown size={13} className="text-white/50" />
-              : <ChevronUp size={13} className="text-white/50" />
+              ? <ChevronDown size={8} className="text-white/50" />
+              : <ChevronUp size={8} className="text-white/50" />
             }
           </button>
         </div>
@@ -204,60 +204,51 @@ const OutputNode = memo(({ data, selected, id }) => {
           >
             {/* Running state */}
             {status === 'running' && (
-              <div className="flex flex-col items-center justify-center py-8 gap-3">
-                <div className="w-7 h-7 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
-                <p className="text-xs text-white/50">Đang xử lý...</p>
+              <div className="flex flex-col items-center justify-center py-4 gap-1">
+                <div className="w-4 h-4 border border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                <p className="text-[8px] text-white/50">Processing...</p>
               </div>
             )}
 
             {/* Has result */}
             {status !== 'running' && responseText && (
-              <div className="p-4">
+              <div className="p-1.5">
                 {/* Update indicator */}
                 {isUpdating && (
                   <motion.div
-                    initial={{ opacity: 0, y: -10 }}
+                    initial={{ opacity: 0, y: -5 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className="mb-3 flex items-center gap-2 text-xs text-green-400 bg-green-400/10 border border-green-400/20 rounded-lg px-3 py-2"
+                    className="mb-1 flex items-center gap-1 text-[7px] text-green-400 bg-green-400/10 border border-green-400/20 rounded px-1 py-0.5"
                   >
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                    <span>Đang cập nhật kết quả mới...</span>
+                    <div className="w-1 h-1 bg-green-400 rounded-full animate-pulse" />
+                    <span>Updated</span>
                   </motion.div>
                 )}
                 
                 <div
-                  className="text-sm text-white/90 leading-relaxed whitespace-pre-wrap max-h-[320px] overflow-y-auto pr-1"
+                  className="text-[9px] text-white/90 leading-relaxed whitespace-pre-wrap max-h-[120px] overflow-y-auto pr-0.5"
                   style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}
                 >
                   {responseText}
                 </div>
 
                 {/* Footer meta */}
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/8">
-                  {displayResult?.model && (
-                    <span className="text-[10px] text-white/30 font-mono">{displayResult.model}</span>
-                  )}
-                  {displayResult?.usage?.total_tokens && (
-                    <span className="text-[10px] text-white/30">{displayResult.usage.total_tokens} tokens</span>
-                  )}
-                  {lastExecuted && (
-                    <span className="text-[10px] text-white/30">
-                      {new Date(lastExecuted).toLocaleTimeString('vi-VN')}
-                    </span>
-                  )}
-                </div>
+                {displayResult?.usage?.total_tokens && (
+                  <div className="mt-1.5 pt-1.5 border-t border-white/8">
+                    <span className="text-[7px] text-white/30">{displayResult.usage.total_tokens}t</span>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Empty state */}
             {status !== 'running' && !responseText && (
-              <div className="flex flex-col items-center justify-center py-10 gap-2">
-                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
-                  <FileText size={18} className="text-white/20" />
+              <div className="flex flex-col items-center justify-center py-4 gap-1">
+                <div className="w-6 h-6 rounded bg-white/5 border border-white/10 flex items-center justify-center">
+                  <FileText size={10} className="text-white/20" />
                 </div>
-                <p className="text-xs text-white/40">Chưa có kết quả</p>
-                <p className="text-[10px] text-white/25">Nhấn Run Workflow để bắt đầu</p>
+                <p className="text-[8px] text-white/40">No result</p>
               </div>
             )}
           </motion.div>

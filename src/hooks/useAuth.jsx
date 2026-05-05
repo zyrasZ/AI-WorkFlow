@@ -26,44 +26,40 @@ export function AuthProvider({ children }) {
       console.log('Checking authentication...')
       
       // Check if we have a token first
-      if (!hasValidAuth()) {
-        console.log('No valid auth token found')
+      const token = localStorage.getItem('office_weave_token')
+      if (!token) {
+        console.log('No token found, skipping auth check')
         setUser(null)
         setLoading(false)
         return
       }
       
-      // Try to get current user from backend
-      const response = await apiClient.getCurrentUser()
-      console.log('Auth check successful:', response.data)
-      setUser(response.data)
-      setError(null)
+      // Try to restore from localStorage first (faster, no network)
+      const storedUser = getStoredUser()
+      if (storedUser) {
+        console.log('Restored user from localStorage:', storedUser)
+        setUser(storedUser)
+        setLoading(false)
+        return
+      }
+      
+      // If no stored user but have token, fetch from backend
+      try {
+        const response = await apiClient.getCurrentUser()
+        console.log('Auth check successful:', response.data)
+        const userData = response.data || response
+        localStorage.setItem('user_data', JSON.stringify(userData))
+        setUser(userData)
+        setError(null)
+      } catch (err) {
+        console.log('Auth check failed:', err.message)
+        // Token invalid - clear everything
+        clearAuth()
+        setUser(null)
+      }
     } catch (err) {
-      console.log('Auth check failed:', err.message)
-      
-      // If auth check fails, try to restore from localStorage
-      if (hasValidAuth()) {
-        try {
-          console.log('Trying to restore auth from localStorage...')
-          const userData = getStoredUser()
-          if (userData) {
-            setUser(userData)
-            setError(null)
-            console.log('Auth restored from localStorage:', userData)
-            return
-          }
-        } catch (parseError) {
-          console.error('Failed to restore auth from localStorage:', parseError)
-          clearAuth()
-        }
-      }
-      
-      // No valid auth found
+      console.log('checkAuth error:', err.message)
       setUser(null)
-      // Don't set error for 401 (just means not logged in)
-      if (!err.message.includes('401') && !err.message.includes('Unauthorized')) {
-        setError(handleApiError(err))
-      }
     } finally {
       setLoading(false)
     }

@@ -97,10 +97,10 @@ export default function CustomNode({ data, selected }) {
       initial={{ scale: 0.85, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-      className="ghost-node rounded-xl overflow-hidden cursor-pointer"
+      className="ghost-node rounded-lg overflow-hidden cursor-pointer"
       style={{
-        minWidth: 200,
-        maxWidth: 240,
+        minWidth: 120,
+        maxWidth: 140,
         borderColor: selected ? color : 'rgba(255,255,255,0.12)',
         borderWidth: selected ? 1.5 : 1,
         boxShadow: selected
@@ -112,20 +112,16 @@ export default function CustomNode({ data, selected }) {
       <div className="h-0.5 w-full" style={{ background: `linear-gradient(90deg, ${color}, ${color}00)` }} />
 
       {/* Header */}
-      <div className="flex items-center gap-2.5 px-3 py-2.5">
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+      <div className="flex items-center gap-1 px-1.5 py-1">
+        <div className="w-4 h-4 rounded flex items-center justify-center shrink-0"
           style={{ background: `${color}20`, border: `1px solid ${color}40` }}>
-          <Icon size={14} style={{ color }} />
+          <Icon size={8} style={{ color }} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-white truncate leading-tight">{data.label}</p>
-          {data.subtitle && (
-            <p className="text-[10px] text-slate-400 truncate leading-tight mt-0.5">{data.subtitle}</p>
-          )}
+          <p className="text-[9px] font-semibold text-white truncate leading-tight">{data.label}</p>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <StatusIcon size={10} style={{ color: status.color }} />
-          <span className="text-[9px]" style={{ color: status.color }}>{status.label}</span>
+        <div className="flex items-center gap-0.5 shrink-0">
+          <StatusIcon size={7} style={{ color: status.color }} />
         </div>
       </div>
 

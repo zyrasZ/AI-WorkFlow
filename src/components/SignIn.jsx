@@ -9,6 +9,7 @@ export default function SignIn({ onSignIn, onNavigateToSignUp }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [localError, setLocalError] = useState('')
+  const [oauthLoading, setOauthLoading] = useState(false)
 
   const handleEmailLogin = async (e) => {
     e.preventDefault()
@@ -45,8 +46,14 @@ export default function SignIn({ onSignIn, onNavigateToSignUp }) {
       return
     }
     
-    // TODO: Implement SSO when backend supports it
-    setLocalError(`${provider} login chưa được hỗ trợ. Vui lòng dùng Email.`)
+    if (provider === 'google') {
+      // Redirect to backend Google OAuth endpoint
+      window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/auth/google`
+      return
+    }
+    
+    // Microsoft - not yet supported
+    setLocalError(`${provider} login chưa được hỗ trợ. Vui lòng dùng Email hoặc Google.`)
   }
 
   return (
@@ -78,7 +85,7 @@ export default function SignIn({ onSignIn, onNavigateToSignUp }) {
         transform: 'translateX(-50%)',
         width: '600px',
         height: '400px',
-        background: 'radial-gradient(ellipse, rgba(226,255,70,0.03) 0%, transparent 70%)',
+        background: 'radial-gradient(ellipse, rgba(234,97,19,0.08) 0%, transparent 70%)',
         pointerEvents: 'none',
       }} />
 
@@ -111,15 +118,15 @@ export default function SignIn({ onSignIn, onNavigateToSignUp }) {
             width: '56px',
             height: '56px',
             margin: '0 auto 24px',
-            background: 'linear-gradient(135deg, rgba(226,255,70,0.15), rgba(226,255,70,0.05))',
-            border: '1px solid rgba(226,255,70,0.2)',
+            background: 'linear-gradient(135deg, rgba(234,97,19,0.15), rgba(234,97,19,0.05))',
+            border: '1px solid rgba(234,97,19,0.3)',
             borderRadius: '16px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e2ff46" strokeWidth="1.5">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EA6113" strokeWidth="1.5">
             <rect x="3" y="3" width="18" height="18" rx="2" />
             <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
           </svg>
@@ -139,7 +146,7 @@ export default function SignIn({ onSignIn, onNavigateToSignUp }) {
             letterSpacing: '-0.01em',
           }}
         >
-          Welcome to OfficeAI Weave
+          Welcome to Nomads
         </motion.h1>
 
         {/* Subtitle */}
@@ -155,7 +162,7 @@ export default function SignIn({ onSignIn, onNavigateToSignUp }) {
             lineHeight: 1.6,
           }}
         >
-          Đăng nhập để bắt đầu tự động hóa quy trình văn phòng của bạn.
+          Đăng nhập để bắt đầu xây dựng AI workflows của bạn.
         </motion.p>
 
         {/* Error Message */}
@@ -175,6 +182,41 @@ export default function SignIn({ onSignIn, onNavigateToSignUp }) {
             }}
           >
             {error || localError}
+          </motion.div>
+        )}
+
+        {/* OAuth Loading State */}
+        {oauthLoading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            style={{
+              padding: '16px',
+              background: 'rgba(234,97,19,0.08)',
+              border: '1px solid rgba(234,97,19,0.2)',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              fontSize: '13px',
+              color: '#EA6113',
+              textAlign: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+            }}
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              style={{
+                width: '16px',
+                height: '16px',
+                border: '2px solid rgba(234,97,19,0.3)',
+                borderTopColor: '#EA6113',
+                borderRadius: '50%',
+              }}
+            />
+            Đang xác thực với Google...
           </motion.div>
         )}
 
@@ -202,7 +244,7 @@ export default function SignIn({ onSignIn, onNavigateToSignUp }) {
                   outline: 'none',
                   transition: 'border-color 0.2s',
                 }}
-                onFocus={e => e.currentTarget.style.borderColor = '#e2ff46'}
+                onFocus={e => e.currentTarget.style.borderColor = '#EA6113'}
                 onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
               />
             </div>
@@ -228,7 +270,7 @@ export default function SignIn({ onSignIn, onNavigateToSignUp }) {
                   outline: 'none',
                   transition: 'border-color 0.2s',
                 }}
-                onFocus={e => e.currentTarget.style.borderColor = '#e2ff46'}
+                onFocus={e => e.currentTarget.style.borderColor = '#EA6113'}
                 onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
               />
             </div>
@@ -241,12 +283,12 @@ export default function SignIn({ onSignIn, onNavigateToSignUp }) {
               style={{
                 width: '100%',
                 padding: '14px 20px',
-                background: loading ? 'rgba(226,255,70,0.5)' : '#e2ff46',
+                background: loading ? 'rgba(234,97,19,0.5)' : '#EA6113',
                 border: 'none',
                 borderRadius: '12px',
                 fontSize: '14px',
                 fontWeight: 700,
-                color: '#050507',
+                color: '#F8F4E9',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 transition: 'all 0.2s ease',
                 marginTop: '8px',
@@ -302,8 +344,8 @@ export default function SignIn({ onSignIn, onNavigateToSignUp }) {
               transition: 'all 0.2s ease',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.borderColor = '#e2ff46'
-              e.currentTarget.style.background = 'rgba(226,255,70,0.05)'
+              e.currentTarget.style.borderColor = '#EA6113'
+              e.currentTarget.style.background = 'rgba(234,97,19,0.05)'
             }}
             onMouseLeave={e => {
               e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
@@ -325,8 +367,9 @@ export default function SignIn({ onSignIn, onNavigateToSignUp }) {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
             onClick={() => handleAuth('google')}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            disabled={oauthLoading}
+            whileHover={{ scale: oauthLoading ? 1 : 1.02 }}
+            whileTap={{ scale: oauthLoading ? 1 : 0.98 }}
             style={{
               width: '100%',
               padding: '14px 20px',
@@ -339,13 +382,15 @@ export default function SignIn({ onSignIn, onNavigateToSignUp }) {
               gap: '12px',
               fontSize: '14px',
               fontWeight: 600,
-              color: '#fff',
-              cursor: 'pointer',
+              color: oauthLoading ? 'rgba(255,255,255,0.4)' : '#fff',
+              cursor: oauthLoading ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s ease',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.borderColor = '#e2ff46'
-              e.currentTarget.style.background = 'rgba(226,255,70,0.05)'
+              if (!oauthLoading) {
+                e.currentTarget.style.borderColor = '#EA6113'
+                e.currentTarget.style.background = 'rgba(234,97,19,0.05)'
+              }
             }}
             onMouseLeave={e => {
               e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
@@ -358,7 +403,7 @@ export default function SignIn({ onSignIn, onNavigateToSignUp }) {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            Tiếp tục với Google
+            {oauthLoading ? 'Đang xác thực...' : 'Tiếp tục với Google'}
           </motion.button>
 
           {/* Email */}
@@ -386,8 +431,8 @@ export default function SignIn({ onSignIn, onNavigateToSignUp }) {
               transition: 'all 0.2s ease',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.borderColor = '#e2ff46'
-              e.currentTarget.style.background = 'rgba(226,255,70,0.05)'
+              e.currentTarget.style.borderColor = '#EA6113'
+              e.currentTarget.style.background = 'rgba(234,97,19,0.05)'
             }}
             onMouseLeave={e => {
               e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
@@ -420,15 +465,15 @@ export default function SignIn({ onSignIn, onNavigateToSignUp }) {
             onClick={onNavigateToSignUp}
             style={{
               fontSize: '13px',
-              color: '#e2ff46',
+              color: '#EA6113',
               background: 'none',
               border: 'none',
               cursor: 'pointer',
               textDecoration: 'none',
               transition: 'color 0.2s',
             }}
-            onMouseEnter={e => e.currentTarget.style.color = '#f0ff6b'}
-            onMouseLeave={e => e.currentTarget.style.color = '#e2ff46'}
+            onMouseEnter={e => e.currentTarget.style.color = '#F88F22'}
+            onMouseLeave={e => e.currentTarget.style.color = '#EA6113'}
           >
             Đăng ký ngay
           </button>
@@ -449,7 +494,7 @@ export default function SignIn({ onSignIn, onNavigateToSignUp }) {
               textDecoration: 'none',
               transition: 'color 0.2s',
             }}
-            onMouseEnter={e => e.currentTarget.style.color = '#e2ff46'}
+            onMouseEnter={e => e.currentTarget.style.color = '#EA6113'}
             onMouseLeave={e => e.currentTarget.style.color = '#6b7280'}
           >
             Quên mật khẩu?

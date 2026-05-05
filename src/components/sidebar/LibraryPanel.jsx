@@ -1,9 +1,10 @@
 import { memo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, FileText, Zap, FileOutput, Brain, History, Settings } from 'lucide-react';
+import { Search, FileText, Zap, FileOutput } from 'lucide-react';
 import SectionContent from './SectionContent';
+import FilesPanel from './FilesPanel';
 
-const LibraryPanel = memo(({ activeSection, isVisible }) => {
+const LibraryPanel = memo(({ activeSection, isVisible, onOpenFile, onCreateFile }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Chỉ giữ các node thực sự hoạt động
@@ -94,7 +95,7 @@ const LibraryPanel = memo(({ activeSection, isVisible }) => {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-5"
+        <div className={`flex-1 overflow-y-auto ${showLibrary ? 'p-4 space-y-5' : ''}`}
           style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
 
           {showLibrary ? (
