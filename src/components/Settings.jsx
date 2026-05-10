@@ -12,9 +12,8 @@ export default function Settings({ onBack }) {
   const [error, setError] = useState('')
 
   // Get user data from useAuth or fallback to localStorage
-  const getUserData = () => {
-    if (user) return user
-    
+  // This will re-calculate whenever 'user' changes
+  const currentUser = user || (() => {
     try {
       const storedUserData = localStorage.getItem('user_data')
       if (storedUserData) {
@@ -23,11 +22,15 @@ export default function Settings({ onBack }) {
     } catch (e) {
       console.error('Failed to parse user_data:', e)
     }
-    
     return null
-  }
-
-  const currentUser = getUserData()
+  })()
+  
+  // Get workspace name from user data
+  const workspaceName = currentUser?.name || 
+                        currentUser?.user_metadata?.full_name ||
+                        currentUser?.user_metadata?.name ||
+                        currentUser?.email?.split('@')[0] || 
+                        'My WorkSpace'
 
   // Load user settings
   useEffect(() => {
@@ -71,7 +74,7 @@ export default function Settings({ onBack }) {
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}
           >
             <ArrowLeft size={18} />
-            Nguyễn Lê Thái Phát's Workspace
+            {workspaceName}'s Workspace
           </button>
         </div>
 
@@ -110,7 +113,7 @@ export default function Settings({ onBack }) {
       {/* Main content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '48px 64px' }}>
         {activeTab === 'profile' && <ProfileTab user={currentUser} />}
-        {activeTab === 'settings' && <SettingsTab />}
+        {activeTab === 'settings' && <SettingsTab workspaceName={workspaceName} />}
         {activeTab === 'members' && <MembersTab />}
       </div>
     </div>
@@ -202,7 +205,7 @@ function ProfileTab({ user }) {
   )
 }
 
-function SettingsTab() {
+function SettingsTab({ workspaceName = 'My WorkSpace' }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -223,7 +226,7 @@ function SettingsTab() {
             fontSize: '32px', fontWeight: 700, color: '#fff',
             border: '2px solid rgba(255,255,255,0.1)',
           }}>
-            N
+            {workspaceName.charAt(0).toUpperCase()}
           </div>
         </div>
 
@@ -232,7 +235,7 @@ function SettingsTab() {
         </label>
         <input
           type="text"
-          defaultValue="Nguyễn Lê Thái Phát's Workspace"
+          defaultValue={`${workspaceName}'s Workspace`}
           style={{
             width: '100%', padding: '12px 16px',
             background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',

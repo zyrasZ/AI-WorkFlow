@@ -39,12 +39,12 @@ function DiamondNode({ data, isSelected }) {
   const StatusIcon = status.icon
 
   return (
-    <div className="relative flex flex-col items-center" style={{ width: 140 }}>
+    <div className="relative flex flex-col items-center" style={{ width: 180 }}>
       {/* Diamond */}
       <div
         className="cursor-pointer transition-all duration-200"
         style={{
-          width: 100, height: 100,
+          width: 130, height: 130,
           background: `rgba(234,179,8,0.12)`,
           border: `2px solid rgba(234,179,8,0.5)`,
           transform: 'rotate(45deg)',
@@ -55,17 +55,17 @@ function DiamondNode({ data, isSelected }) {
       </div>
       {/* Inner content (counter-rotated) */}
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ top: 0 }}>
-        <GitBranch size={18} style={{ color: '#eab308' }} />
-        <span className="text-xs font-semibold text-white mt-1 text-center px-2 leading-tight">{data.label}</span>
+        <GitBranch size={20} style={{ color: '#eab308' }} />
+        <span className="text-[10px] font-semibold text-white mt-1 text-center px-2 leading-tight">{data.label}</span>
         <div className="flex items-center gap-1 mt-1">
-          <StatusIcon size={9} style={{ color: status.color }} />
-          <span className="text-[9px]" style={{ color: status.color }}>{status.label}</span>
+          <StatusIcon size={8} style={{ color: status.color }} />
+          <span className="text-[8px]" style={{ color: status.color }}>{status.label}</span>
         </div>
       </div>
 
       {/* Condition text below */}
       {data.condition && (
-        <div className="mt-2 px-2 py-1 rounded text-[10px] text-center"
+        <div className="mt-2 px-2 py-1 rounded text-[9px] text-center"
           style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.2)', color: '#fbbf24' }}>
           {data.condition}
         </div>
@@ -76,8 +76,8 @@ function DiamondNode({ data, isSelected }) {
       <Handle type="source" id="false" position={Position.Bottom} style={{ bottom: -5, left: '50%', transform: 'translateX(-50%)' }} />
 
       {/* Branch labels */}
-      <div className="absolute text-[9px] font-bold" style={{ right: -28, top: '42%', color: '#22c55e' }}>TRUE</div>
-      <div className="absolute text-[9px] font-bold" style={{ bottom: -18, left: '50%', transform: 'translateX(-50%)', color: '#ef4444' }}>FALSE</div>
+      <div className="absolute text-[8px] font-bold" style={{ right: -28, top: '42%', color: '#22c55e' }}>TRUE</div>
+      <div className="absolute text-[8px] font-bold" style={{ bottom: -18, left: '50%', transform: 'translateX(-50%)', color: '#ef4444' }}>FALSE</div>
     </div>
   )
 }
@@ -99,8 +99,8 @@ export default function CustomNode({ data, selected }) {
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       className="ghost-node rounded-lg overflow-hidden cursor-pointer"
       style={{
-        minWidth: 120,
-        maxWidth: 140,
+        minWidth: 160,
+        maxWidth: 180,
         borderColor: selected ? color : 'rgba(255,255,255,0.12)',
         borderWidth: selected ? 1.5 : 1,
         boxShadow: selected
@@ -112,16 +112,16 @@ export default function CustomNode({ data, selected }) {
       <div className="h-0.5 w-full" style={{ background: `linear-gradient(90deg, ${color}, ${color}00)` }} />
 
       {/* Header */}
-      <div className="flex items-center gap-1 px-1.5 py-1">
-        <div className="w-4 h-4 rounded flex items-center justify-center shrink-0"
+      <div className="flex items-center gap-1 px-2 py-1.5">
+        <div className="w-5 h-5 rounded flex items-center justify-center shrink-0"
           style={{ background: `${color}20`, border: `1px solid ${color}40` }}>
-          <Icon size={8} style={{ color }} />
+          <Icon size={10} style={{ color }} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[9px] font-semibold text-white truncate leading-tight">{data.label}</p>
+          <p className="text-[10px] font-semibold text-white truncate leading-tight">{data.label}</p>
         </div>
         <div className="flex items-center gap-0.5 shrink-0">
-          <StatusIcon size={7} style={{ color: status.color }} />
+          <StatusIcon size={8} style={{ color: status.color }} />
         </div>
       </div>
 

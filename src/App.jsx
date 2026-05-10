@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { getGmailToken, listenForAuthChanges } from './lib/supabase'
 import LandingPage from './components/LandingPage'
+import NomadsBackground from './components/NomadsBackground'
 import SignIn from './components/SignIn'
 import SignUp from './components/SignUp'
 import ProjectManagement from './components/ProjectManagement'
@@ -16,6 +18,12 @@ import SidebarWrapper from './components/sidebar/SidebarWrapper'
 import GhostNode from './components/GhostNode'
 import PromptNode from './components/PromptNode'
 import OutputNode from './components/OutputNode'
+import FileInputNode from './components/FileInputNode'
+import EmailAccountNode from './components/EmailAccountNode'
+import SendEmailNode from './components/SendEmailNode'
+import ReadEmailNode from './components/ReadEmailNode'
+import FilterEmailNode from './components/FilterEmailNode'
+import EmailTemplateNode from './components/EmailTemplateNode'
 import NeonEdge from './components/NeonEdge'
 import FigmaWeaveBackground from './components/FigmaWeaveBackground'
 import DebugInfo from './components/DebugInfo'
@@ -55,6 +63,12 @@ const nodeTypes = {
   ghostNode: GhostNode,
   promptNode: PromptNode,
   outputNode: OutputNode,
+  fileInputNode: FileInputNode,
+  emailAccountNode: EmailAccountNode,
+  sendEmailNode: SendEmailNode,
+  readEmailNode: ReadEmailNode,
+  filterEmailNode: FilterEmailNode,
+  emailTemplateNode: EmailTemplateNode,
 }
 const edgeTypes = { neonEdge: NeonEdge }
 
@@ -84,57 +98,152 @@ export default function App() {
   const [projectManagementKey, setProjectManagementKey] = useState(0)
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editedTitle, setEditedTitle] = useState('')
+  const [zoomLevel, setZoomLevel] = useState(100)
   const reactFlowWrapper = useRef(null)
   const [reactFlowInstance, setReactFlowInstance] = useState(null)
   const saveTimeoutRef = useRef(null)
+  const lastSaveDataRef = useRef(null) // Track last saved data to avoid unnecessary saves
+
+  // ✅ Initialize Supabase auth listener (stores provider_token on login/refresh)
+  useEffect(() => {
+    listenForAuthChanges();
+    // Also try to get Gmail token from existing session on mount
+    getGmailToken().then(token => {
+      if (token) {
+        console.log('✅ Gmail token available on mount');
+      }
+    });
+  }, []);
 
   // ✅ Handle Google OAuth callback at App level
-  // Backend redirects to: /?access_token=xxx or /?message=error
+  // Supabase redirects with tokens in URL hash: /#access_token=xxx&provider_token=yyy
+  // OR in query params: /?access_token=xxx
   useEffect(() => {
+    // Check both query params and hash fragment
     const params = new URLSearchParams(window.location.search)
-    const accessToken = params.get('access_token')
-    const errorMsg = params.get('message')
+    const hashParams = new URLSearchParams(window.location.hash.replace('#', ''))
+
+    const accessToken = params.get('access_token') || hashParams.get('access_token')
+    const errorMsg = params.get('message') || hashParams.get('error_description')
+
+    // Also grab provider_token from hash (Supabase puts it there)
+    const providerToken = params.get('provider_token') || hashParams.get('provider_token')
+    const providerRefreshToken = params.get('provider_refresh_token') || hashParams.get('provider_refresh_token')
 
     if (!accessToken && !errorMsg) return
 
     if (accessToken) {
       console.log('✅ Google OAuth callback detected, processing token...')
+      console.log('🔍 provider_token from URL:', providerToken ? providerToken.slice(0, 30) + '...' : 'EMPTY/NULL')
+      console.log('🔍 provider_refresh_token:', providerRefreshToken ? 'present' : 'EMPTY/NULL')
+      
+      // Store Supabase token
       localStorage.setItem('office_weave_token', accessToken)
+
+      // Store Gmail provider_token if present (for Gmail API)
+      if (providerToken) {
+        localStorage.setItem('gmail_access_token', providerToken)
+        console.log('✅ Gmail provider_token stored from URL')
+      } else {
+        console.warn('⚠️ provider_token is empty in URL — trying Supabase session fallback...')
+        // Fallback: try to get provider_token from Supabase session
+        getGmailToken().then(token => {
+          if (token) {
+            console.log('✅ Gmail token retrieved via Supabase session fallback')
+          } else {
+            console.warn('⚠️ No provider_token available — user may need to re-authorize Gmail')
+          }
+        })
+      }
+      if (providerRefreshToken) {
+        localStorage.setItem('gmail_refresh_token', providerRefreshToken)
+      }
+
+      // Clear URL params
       window.history.replaceState({}, '', window.location.pathname)
 
+      // Fetch user info from backend
       const API_BASE = import.meta.env.VITE_API_URL || 'https://back-end-auto-office-f8xt.vercel.app'
+      console.log('📥 Fetching user info from:', `${API_BASE}/api/auth/user`)
+      
       fetch(`${API_BASE}/api/auth/user`, {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
+        headers: { 
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
       })
-        .then(r => r.json())
+        .then(r => {
+          console.log('Response status:', r.status)
+          if (!r.ok) {
+            throw new Error(`HTTP ${r.status}: ${r.statusText}`)
+          }
+          return r.json()
+        })
         .then(data => {
-          if (data.success || data.data) {
-            const userData = data.data || data
+          console.log('📦 User data response:', data)
+          
+          // Extract user data from response
+          const userData = data.data || data.user || data
+          
+          if (userData && userData.email) {
+            console.log('✅ User info received:', {
+              email: userData.email,
+              name: userData.name || userData.user_metadata?.name || userData.user_metadata?.full_name,
+              avatar: userData.avatar_url || userData.user_metadata?.avatar_url,
+              provider: userData.provider
+            })
+            
+            // Store complete user data
             localStorage.setItem('user_data', JSON.stringify(userData))
+
+            // Fetch Gmail token from Supabase session (provider_token)
+            if (userData.provider === 'google') {
+              getGmailToken().then(token => {
+                if (token) {
+                  console.log('✅ Gmail token ready:', token.slice(0, 20) + '...')
+                } else {
+                  console.warn('⚠️ No Gmail provider_token in session — user may need to re-login')
+                }
+              })
+            }
+            
+            // Dispatch custom event to notify useAuth to refresh
+            window.dispatchEvent(new CustomEvent('auth-changed', { detail: userData }))
+            
             console.log('✅ Google login successful, navigating to projects')
-            setShowLanding(false)
-            setShowSignIn(false)
-            setShowSignUp(false)
-            setShowProjectManagement(true)
-            setProjectManagementKey(k => k + 1)
-            setNavigationHistory(['projects'])
-            window.history.replaceState({ page: 'projects' }, '', '#/projects')
+            
+            // Small delay to ensure auth state is updated before navigation
+            setTimeout(() => {
+              setShowLanding(false)
+              setShowSignIn(false)
+              setShowSignUp(false)
+              setShowProjectManagement(true)
+              setProjectManagementKey(k => k + 1)
+              setNavigationHistory(['projects'])
+              window.history.replaceState({ page: 'projects' }, '', '#/projects')
+            }, 100) // 100ms delay
           } else {
-            console.error('Failed to get user info:', data)
+            console.error('❌ Invalid user data format:', data)
             localStorage.removeItem('office_weave_token')
+            localStorage.removeItem('user_data')
+            alert('Không thể lấy thông tin người dùng từ Google. Vui lòng thử lại.')
             setShowLanding(false)
             setShowSignIn(true)
           }
         })
         .catch(err => {
-          console.error('OAuth user fetch error:', err)
+          console.error('❌ OAuth user fetch error:', err)
           localStorage.removeItem('office_weave_token')
+          localStorage.removeItem('user_data')
+          alert('Lỗi khi lấy thông tin người dùng: ' + err.message)
           setShowLanding(false)
           setShowSignIn(true)
         })
     } else if (errorMsg) {
       console.error('OAuth error:', errorMsg)
       window.history.replaceState({}, '', window.location.pathname)
+      alert('Đăng nhập Google thất bại: ' + errorMsg)
       // Show sign in page - setState in async callback is fine
       setTimeout(() => {
         setShowLanding(false)
@@ -724,19 +833,63 @@ export default function App() {
     }
   }, [currentProject, nodes, edges, generateThumbnail]);
 
-  // Debounced auto-save: save 2 seconds after last change
+  // Smart auto-save with debounce and change detection
   useEffect(() => {
     if (!currentProject || nodes.length === 0) return;
+
+    // Create a snapshot of current data for comparison (exclude callbacks)
+    const currentSnapshot = JSON.stringify({
+      nodes: nodes.map(n => ({
+        id: n.id,
+        type: n.type,
+        position: n.position,
+        data: {
+          ...n.data,
+          // Exclude callbacks from comparison
+          onDataChange: undefined,
+          onNodeResult: undefined,
+          onPromptChange: undefined,
+          getNodes: undefined,
+          getEdges: undefined,
+        }
+      })),
+      edges: edges
+    });
+
+    // Skip save if data hasn't actually changed
+    if (lastSaveDataRef.current === currentSnapshot) {
+      return;
+    }
 
     // Clear previous timeout
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
-    // Set new timeout
+    // Determine if this is a structural change or just data change
+    let isStructuralChange = false;
+    if (lastSaveDataRef.current) {
+      try {
+        const lastData = JSON.parse(lastSaveDataRef.current);
+        isStructuralChange = lastData.nodes.length !== nodes.length || 
+                           lastData.edges.length !== edges.length;
+      } catch (e) {
+        isStructuralChange = true;
+      }
+    } else {
+      isStructuralChange = true; // First save
+    }
+    
+    // Smart debounce timing:
+    // - 2 seconds for structural changes (add/remove nodes/edges)
+    // - 15 seconds for data changes (typing in fields)
+    const debounceTime = isStructuralChange ? 2000 : 15000;
+
     saveTimeoutRef.current = setTimeout(() => {
+      console.log(`💾 Auto-saving (${isStructuralChange ? 'structural' : 'data'} change)...`);
+      lastSaveDataRef.current = currentSnapshot;
       saveProject();
-    }, 2000); // 2 seconds debounce
+    }, debounceTime);
 
     // Cleanup
     return () => {
@@ -954,6 +1107,74 @@ export default function App() {
           status: 'idle',
           nodeType: 'output',
         };
+      } else if (type === 'file-input') {
+        nodeType = 'fileInputNode';
+        nodeData = {
+          label: 'File Input',
+          color: '#f97316',
+          files: [],
+          fileUrl: '',
+          hasOutput: true,
+          nodeType: 'file-input',
+        };
+      } else if (type === 'email-account') {
+        nodeType = 'emailAccountNode';
+        nodeData = {
+          label: 'Email Account',
+          color: '#8b5cf6',
+          email: '',
+          password: '',
+          hasOutput: true,
+          nodeType: 'email-account',
+        };
+      } else if (type === 'send-email') {
+        nodeType = 'sendEmailNode';
+        nodeData = {
+          label: 'Send Email',
+          color: '#f97316',
+          to: '',
+          subject: '',
+          body: '',
+          hasInput: true,
+          hasOutput: true,
+          nodeType: 'send-email',
+        };
+      } else if (type === 'read-email') {
+        nodeType = 'readEmailNode';
+        nodeData = {
+          label: 'Read Email',
+          color: '#3b82f6',
+          folder: 'INBOX',
+          limit: 10,
+          unreadOnly: false,
+          hasInput: true,
+          hasOutput: true,
+          nodeType: 'read-email',
+        };
+      } else if (type === 'filter-email') {
+        nodeType = 'filterEmailNode';
+        nodeData = {
+          label: 'Filter Email',
+          color: '#eab308',
+          logic: 'AND',
+          rules: [],
+          hasInput: true,
+          hasOutput: true,
+          nodeType: 'filter-email',
+        };
+      } else if (type === 'email-template') {
+        nodeType = 'emailTemplateNode';
+        nodeData = {
+          label: 'Email Template',
+          color: '#10b981',
+          subject: '',
+          body: '',
+          bodyType: 'text',
+          variables: [],
+          hasInput: true,
+          hasOutput: true,
+          nodeType: 'email-template',
+        };
       } else {
         // Fallback for nodes not in registry
         nodeData = {
@@ -997,6 +1218,9 @@ export default function App() {
 
   return (
     <>
+      {/* ── Shared background — hiển thị xuyên suốt mọi trang ── */}
+      <NomadsBackground />
+
       <AnimatePresence mode="wait">
         {showLanding && (
           <motion.div
@@ -1093,7 +1317,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <div className="flex flex-col h-screen w-screen overflow-hidden" style={{ background: '#0a0a0c' }}>
+      <div className="flex flex-col h-screen w-screen overflow-hidden" style={{ background: '#0d0928', display: currentProject ? 'flex' : 'none' }}>
       
       {/* Top Bar - Full Width */}
       <div className="h-14 bg-black/40 backdrop-blur-sm border-b border-white/10 flex items-center justify-between px-4 z-50">
@@ -1133,7 +1357,7 @@ export default function App() {
         
         {/* Right - Status indicators */}
         <div className="flex items-center space-x-3">
-          {/* Auto-save indicator */}
+          {/* Auto-save indicator with better feedback */}
           {currentProject && (
             <div className="flex items-center space-x-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg">
               {isSaving ? (
@@ -1145,13 +1369,13 @@ export default function App() {
                 <>
                   <div className="w-2 h-2 bg-green-400 rounded-full" />
                   <span className="text-xs text-white/60">
-                    Đã lưu {new Date(lastSaved).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                    Đã lưu {new Date(lastSaved).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                   </span>
                 </>
               ) : (
                 <>
                   <div className="w-2 h-2 bg-white/30 rounded-full" />
-                  <span className="text-xs text-white/40">Chưa lưu</span>
+                  <span className="text-xs text-white/40">Tự động lưu</span>
                 </>
               )}
             </div>
@@ -1217,6 +1441,9 @@ export default function App() {
             onNodeClick={onNodeClick}
             onPaneClick={onPaneClick}
             onInit={setReactFlowInstance}
+            onMove={(event, viewport) => {
+              setZoomLevel(Math.round(viewport.zoom * 100))
+            }}
             onDrop={onDrop}
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
@@ -1273,54 +1500,11 @@ export default function App() {
 
       {/* Bottom Navigation */}
       <div className="h-12 bg-black/80 backdrop-blur-sm border-t border-white/10 flex items-center justify-between px-4">
-        <div className="flex items-center space-x-4">
-          <button className="p-2 hover:bg-white/5 rounded transition-colors" title="Selection Tool">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-white/60">
-              <path d="M3 3L10.5 12L7 16L3 3Z" stroke="currentColor" strokeWidth="1.5"/>
-            </svg>
-          </button>
-          <button className="p-2 hover:bg-white/5 rounded transition-colors" title="Pan Tool">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-white/60">
-              <path d="M8 12L12 8L16 12L12 16L8 12Z" stroke="currentColor" strokeWidth="1.5"/>
-            </svg>
-          </button>
-          <div className="w-px h-6 bg-white/10" />
-          <button 
-            onClick={handleRunWorkflow}
-            disabled={isExecuting}
-            className="flex items-center space-x-2 px-3 py-1.5 bg-green-600/20 border border-green-500/30 rounded text-xs text-green-400 hover:bg-green-600/30 disabled:opacity-50 transition-colors"
-          >
-            {isExecuting ? (
-              <>
-                <div className="w-3 h-3 border border-green-400 border-t-transparent rounded-full animate-spin" />
-                <span>Running...</span>
-              </>
-            ) : (
-              <>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M8 5V19L19 12L8 5Z"/>
-                </svg>
-                <span>Run Workflow</span>
-              </>
-            )}
-          </button>
+        <div className="flex items-center space-x-2">
         </div>
 
         <div className="flex items-center space-x-4">
-          <button className="p-2 hover:bg-white/5 rounded transition-colors" title="Undo">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-white/60">
-              <path d="M3 7V11H7" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M3 11C3 11 5 7 12 7C19 7 21 11 21 11" stroke="currentColor" strokeWidth="1.5"/>
-            </svg>
-          </button>
-          <button className="p-2 hover:bg-white/5 rounded transition-colors" title="Redo">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-white/60">
-              <path d="M21 7V11H17" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M21 11C21 11 19 7 12 7C5 7 3 11 3 11" stroke="currentColor" strokeWidth="1.5"/>
-            </svg>
-          </button>
-          <div className="w-px h-6 bg-white/10" />
-          <span className="text-xs text-white/60">100%</span>
+          <span className="text-xs text-white/60">{zoomLevel}%</span>
         </div>
       </div>
 

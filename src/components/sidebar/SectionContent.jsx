@@ -62,10 +62,10 @@ const SectionContent = memo(({ activeSection }) => {
       subtitle: 'Available AI capabilities',
       icon: Brain,
       items: [
-        { icon: Cpu, label: 'GPT-4o', description: 'Advanced language model', status: 'active', count: 1 },
-        { icon: Cpu, label: 'Claude 3.5', description: 'Reasoning and analysis', status: 'active', count: 1 },
-        { icon: Cpu, label: 'DALL-E 3', description: 'Image generation', status: 'active', count: 1 },
-        { icon: Cpu, label: 'Runway Gen-4.5', description: 'Video generation', status: 'limited', count: 1 }
+        { icon: Zap, label: 'Llama 3.3 70B', description: 'Mạnh nhất - Groq', status: 'active', count: 1, badge: 'GROQ' },
+        { icon: Zap, label: 'Llama 3.1 8B', description: 'Nhanh & nhẹ - Groq', status: 'active', count: 1, badge: 'GROQ' },
+        { icon: Zap, label: 'Mixtral 8x7B', description: 'Đa năng - Groq', status: 'active', count: 1, badge: 'GROQ' },
+        { icon: Zap, label: 'Gemma 2 9B', description: 'Google - Groq', status: 'active', count: 1, badge: 'GROQ' }
       ]
     },
     projects: {
@@ -122,7 +122,7 @@ const SectionContent = memo(({ activeSection }) => {
   return (
     <div className="space-y-4">
       {/* Section Header */}
-      <div className="flex items-center space-x-3 mb-4">
+      <div className="flex items-center space-x-3 mb-4 pt-4">
         <div className="p-2 bg-white/10 rounded-lg">
           <SectionIcon size={20} className="text-white/80" />
         </div>
@@ -132,70 +132,113 @@ const SectionContent = memo(({ activeSection }) => {
         </div>
       </div>
 
-      {/* Section Items - Asset Library Style */}
-      <div className="space-y-3">
-        {section.items.map((item, index) => {
-          const ItemIcon = item.icon;
-          
-          return (
-            <div
-              key={index}
-              className="p-4 bg-gray-800/50 hover:bg-gray-700/50 border border-white/10 hover:border-white/20 rounded-xl transition-all duration-200 cursor-pointer group"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="shrink-0 p-2.5 bg-white/10 rounded-lg group-hover:bg-white/20 transition-colors">
-                    <ItemIcon size={20} className="text-white/60 group-hover:text-white/80" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-base font-medium text-white/90 mb-1">
-                      {item.label}
-                    </h4>
-                    <p className="text-sm text-white/50">
-                      {item.description}
-                    </p>
-                    {item.time && (
-                      <p className="text-xs text-white/40 mt-1">{item.time}</p>
-                    )}
-                    {item.status && (
-                      <span className={`
-                        inline-block text-xs px-2 py-1 rounded-full mt-2
-                        ${item.status === 'active' ? 'bg-green-400/20 text-green-400' : ''}
-                        ${item.status === 'limited' ? 'bg-yellow-400/20 text-yellow-400' : ''}
-                      `}>
-                        {item.status}
-                      </span>
-                    )}
-                    {item.progress !== undefined && (
-                      <div className="mt-3">
-                        <div className="flex items-center justify-between text-xs text-white/50 mb-2">
-                          <span>Progress</span>
-                          <span>{item.progress}%</span>
-                        </div>
-                        <div className="w-full bg-white/10 rounded-full h-2">
-                          <div 
-                            className="bg-blue-400 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${item.progress}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
+      {/* AI Models - Exact copy from LibraryPanel */}
+      {activeSection === 'models' ? (
+        <div className="px-4 mt-6">
+          <p className="text-[10px] font-bold tracking-widest uppercase mb-2"
+            style={{ color: '#10b981' }}>
+            AI MODELS
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {section.items.map((item, index) => {
+              const ItemIcon = item.icon;
+              return (
+                <div
+                  key={index}
+                  className="relative aspect-square p-3 border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 rounded-xl cursor-grab active:cursor-grabbing transition-all duration-150 group flex flex-col items-center justify-center text-center select-none hover:scale-[1.03]"
+                  title={item.description}
+                >
+                  {item.badge && (
+                    <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[8px] font-bold"
+                      style={{
+                        background: `${item.badgeColor || '#10b981'}20`,
+                        border: `1px solid ${item.badgeColor || '#10b981'}40`,
+                        color: item.badgeColor || '#10b981',
+                      }}>
+                      {item.badge}
+                    </div>
+                  )}
+                  <ItemIcon size={20} className="mb-2 transition-colors text-white/60 group-hover:text-white"
+                    style={{ color: item.badge ? '#10b981' : undefined }} />
+                  <span className="text-[11px] text-white/75 group-hover:text-white font-medium leading-tight">
+                    {item.label}
+                  </span>
                 </div>
-                
-                {/* Count/Number on the right */}
-                {item.count !== undefined && (
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-white/80 mb-1">
-                      {item.count}
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        /* Section Items - Default List Style */
+        <div className="space-y-3">
+          {section.items.map((item, index) => {
+            const ItemIcon = item.icon;
+            
+            return (
+              <div
+                key={index}
+                className="p-4 bg-gray-800/50 hover:bg-gray-700/50 border border-white/10 hover:border-white/20 rounded-xl transition-all duration-200 cursor-pointer group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="shrink-0 p-2.5 bg-white/10 rounded-lg group-hover:bg-white/20 transition-colors">
+                      <ItemIcon size={20} className="text-white/60 group-hover:text-white/80" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-base font-medium text-white/90 mb-1">
+                        {item.label}
+                      </h4>
+                      <p className="text-sm text-white/50">
+                        {item.description}
+                      </p>
+                      {item.time && (
+                        <p className="text-xs text-white/40 mt-1">{item.time}</p>
+                      )}
+                      {item.status && (
+                        <span className={`
+                          inline-block text-xs font-semibold px-2 py-1 rounded-full mt-2
+                          ${item.status === 'active' ? 'bg-green-400/20 text-green-400 border border-green-400/30' : ''}
+                          ${item.status === 'limited' ? 'bg-yellow-400/20 text-yellow-400 border border-yellow-400/30' : ''}
+                        `}>
+                          {item.status}
+                        </span>
+                      )}
+                      {item.badge && (
+                        <span className="inline-block text-[10px] font-bold px-2 py-1 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-400/30 mt-2 ml-2">
+                          {item.badge}
+                        </span>
+                      )}
+                      {item.progress !== undefined && (
+                        <div className="mt-3">
+                          <div className="flex items-center justify-between text-xs text-white/50 mb-2">
+                            <span>Progress</span>
+                            <span>{item.progress}%</span>
+                          </div>
+                          <div className="w-full bg-white/10 rounded-full h-2">
+                            <div 
+                              className="bg-blue-400 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${item.progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                )}
+                  
+                  {/* Count/Number on the right */}
+                  {item.count !== undefined && (
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-white/80 mb-1">
+                        {item.count}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 });

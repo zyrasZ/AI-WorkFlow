@@ -17,6 +17,23 @@ export function AuthProvider({ children }) {
     checkAuth()
   }, []) // Empty dependency array ensures this runs only once
 
+  // Listen for auth changes (e.g., after OAuth callback)
+  useEffect(() => {
+    const handleAuthChange = (event) => {
+      console.log('🔄 Auth changed event received:', event.detail)
+      const userData = event.detail
+      setUser(userData)
+      setError(null)
+      setLoading(false)
+    }
+
+    window.addEventListener('auth-changed', handleAuthChange)
+    
+    return () => {
+      window.removeEventListener('auth-changed', handleAuthChange)
+    }
+  }, [])
+
   /**
    * Check if user is authenticated
    */

@@ -1,6 +1,6 @@
 import { memo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, FileText, Zap, FileOutput } from 'lucide-react';
+import { Search, FileText, Zap, FileOutput, Mail } from 'lucide-react';
 import SectionContent from './SectionContent';
 import FilesPanel from './FilesPanel';
 
@@ -19,6 +19,18 @@ const LibraryPanel = memo(({ activeSection, isVisible, onOpenFile, onCreateFile 
           label: 'Prompt',
           description: 'Nhập nội dung gửi cho AI',
         },
+        {
+          id: 'email-account',
+          icon: Mail,
+          label: 'Email Account',
+          description: 'Nhập tài khoản Gmail',
+        },
+        {
+          id: 'file-input',
+          icon: FileText,
+          label: 'Input File',
+          description: 'Tải file Office (Word, Excel, PPT)',
+        },
       ],
     },
     {
@@ -29,6 +41,44 @@ const LibraryPanel = memo(({ activeSection, isVisible, onOpenFile, onCreateFile 
         { id: 'groq-llama-3.1-8b',  icon: Zap, label: 'Llama 3.1 8B',  description: 'Nhanh & nhẹ - Groq',  badge: 'GROQ' },
         { id: 'groq-mixtral-8x7b',  icon: Zap, label: 'Mixtral 8x7B',  description: 'Đa năng - Groq',      badge: 'GROQ' },
         { id: 'groq-gemma-2-9b',    icon: Zap, label: 'Gemma 2 9B',    description: 'Google - Groq',        badge: 'GROQ' },
+      ],
+    },
+    {
+      section: 'EMAIL',
+      color: '#f97316',
+      nodes: [
+        {
+          id: 'send-email',
+          icon: Mail,
+          label: 'Send Email',
+          description: 'Gửi email qua Gmail SMTP',
+          badge: 'TOOL',
+          badgeColor: '#f97316',
+        },
+        {
+          id: 'read-email',
+          icon: Mail,
+          label: 'Read Email',
+          description: 'Đọc email từ INBOX',
+          badge: 'TOOL',
+          badgeColor: '#3b82f6',
+        },
+        {
+          id: 'filter-email',
+          icon: Mail,
+          label: 'Filter Email',
+          description: 'Lọc email theo rules',
+          badge: 'TOOL',
+          badgeColor: '#eab308',
+        },
+        {
+          id: 'email-template',
+          icon: Mail,
+          label: 'Email Template',
+          description: 'Tạo template với variables',
+          badge: 'TOOL',
+          badgeColor: '#10b981',
+        },
       ],
     },
     {
@@ -95,7 +145,7 @@ const LibraryPanel = memo(({ activeSection, isVisible, onOpenFile, onCreateFile 
         </div>
 
         {/* Content */}
-        <div className={`flex-1 overflow-y-auto ${showLibrary ? 'p-4 space-y-5' : ''}`}
+        <div className={`flex-1 overflow-y-auto ${showLibrary ? 'p-4 pb-20 space-y-5' : ''}`}
           style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
 
           {showLibrary ? (

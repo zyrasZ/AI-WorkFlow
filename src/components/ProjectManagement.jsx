@@ -224,16 +224,9 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
   const [error, setError] = useState('')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
 
-  // Get workspace name from user data
-  const workspaceName = currentUser?.name || 
-                        currentUser?.email?.split('@')[0] || 
-                        localStorage.getItem('workspace_name') || 
-                        'My Workspace'
-
   // Get user data from useAuth or fallback to localStorage
-  const getUserData = () => {
-    if (user) return user
-    
+  // This will re-calculate whenever 'user' changes
+  const currentUser = user || (() => {
     try {
       const storedUserData = localStorage.getItem('user_data')
       if (storedUserData) {
@@ -242,11 +235,28 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
     } catch (e) {
       console.error('Failed to parse user_data:', e)
     }
-    
     return null
-  }
+  })()
 
-  const currentUser = getUserData()
+  // Get workspace name from user data
+  const workspaceName = currentUser?.name || 
+                        currentUser?.user_metadata?.full_name ||
+                        currentUser?.user_metadata?.name ||
+                        currentUser?.email?.split('@')[0] || 
+                        'My WorkSpace'
+  
+  // Get user avatar
+  const userAvatar = currentUser?.avatar_url || 
+                     currentUser?.user_metadata?.avatar_url ||
+                     currentUser?.user_metadata?.picture ||
+                     null
+  
+  // Get user display name
+  const userDisplayName = currentUser?.name ||
+                          currentUser?.user_metadata?.full_name ||
+                          currentUser?.user_metadata?.name ||
+                          currentUser?.email?.split('@')[0] ||
+                          'User'
 
   // Debug: Log user data
   useEffect(() => {
@@ -255,6 +265,9 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
     console.log('Current user (with fallback):', currentUser)
     console.log('Auth loading:', authLoading)
     console.log('User email:', currentUser?.email)
+    console.log('User name:', currentUser?.name)
+    console.log('User avatar:', currentUser?.avatar_url)
+    console.log('User metadata:', currentUser?.user_metadata)
     
     const storedUserData = localStorage.getItem('user_data')
     console.log('LocalStorage user_data (raw):', storedUserData)
@@ -264,13 +277,20 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
         const parsedUser = JSON.parse(storedUserData)
         console.log('Parsed user data:', parsedUser)
         console.log('Parsed user email:', parsedUser.email)
+        console.log('Parsed user name:', parsedUser.name)
+        console.log('Parsed user avatar:', parsedUser.avatar_url)
+        console.log('Parsed user metadata:', parsedUser.user_metadata)
       } catch (e) {
         console.error('Failed to parse user_data:', e)
       }
     }
     
     console.log('LocalStorage token:', localStorage.getItem('office_weave_token'))
-  }, [user, authLoading, currentUser])
+    console.log('Computed values:')
+    console.log('  - workspaceName:', workspaceName)
+    console.log('  - userAvatar:', userAvatar)
+    console.log('  - userDisplayName:', userDisplayName)
+  }, [user, authLoading, currentUser, workspaceName, userAvatar, userDisplayName])
 
   // Load workflows from backend - wait for auth to be ready
   useEffect(() => {
@@ -418,13 +438,13 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
     <div style={{ display: 'flex', height: '100vh', width: '100vw', background: '#0a0a0c', fontFamily: "'Inter', system-ui, sans-serif", overflow: 'hidden' }}>
       
       {/* SIDEBAR */}
-      <div style={{ width: '240px', background: '#0d0d0f', borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+      <div style={{ width: '280px', background: '#0d0d0f', borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         {/* User profile */}
         <div style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'relative' }}>
           <button 
             onClick={() => setUserMenuOpen(!userMenuOpen)}
             style={{
-              width: '100%', padding: '10px 12px', background: 'rgba(255,255,255,0.04)',
+              width: '100%', padding: '12px', background: 'rgba(255,255,255,0.04)',
               border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               cursor: 'pointer', transition: 'background 0.15s',
@@ -432,13 +452,28 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
             onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
             onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'linear-gradient(135deg, #EA6113, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: '#fff' }}>
-                {workspaceName.charAt(0).toUpperCase()}
-              </div>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>{workspaceName}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+              {userAvatar ? (
+                <img 
+                  src={userAvatar} 
+                  alt={userDisplayName}
+                  style={{ 
+                    width: '32px', 
+                    height: '32px', 
+                    borderRadius: '8px', 
+                    objectFit: 'cover',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    flexShrink: 0
+                  }} 
+                />
+              ) : (
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #EA6113, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                  {workspaceName.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{workspaceName}</span>
             </div>
-            <ChevronDown size={14} style={{ color: 'rgba(255,255,255,0.4)', transform: userMenuOpen ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
+            <ChevronDown size={14} style={{ color: 'rgba(255,255,255,0.4)', transform: userMenuOpen ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s', flexShrink: 0, marginLeft: '8px' }} />
           </button>
 
           {/* User Dropdown Menu */}
@@ -459,14 +494,31 @@ export default function ProjectManagement({ onOpenProject, onBack, onLogout, onS
                 {/* User Info */}
                 <div style={{ padding: '12px', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'linear-gradient(135deg, #f59e0b, #ef4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 700, color: '#fff' }}>
-                      {(currentUser?.email?.charAt(0) || 'U').toUpperCase()}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff', marginBottom: '2px' }}>
-                        {currentUser?.email?.split('@')[0] || 'User'}
+                    {userAvatar ? (
+                      <img 
+                        src={userAvatar} 
+                        alt={userDisplayName}
+                        style={{ 
+                          width: '48px', 
+                          height: '48px', 
+                          borderRadius: '10px', 
+                          objectFit: 'cover',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          flexShrink: 0
+                        }} 
+                      />
+                    ) : (
+                      <div style={{ width: '48px', height: '48px', borderRadius: '10px', background: 'linear-gradient(135deg, #f59e0b, #ef4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                        {(currentUser?.email?.charAt(0) || 'U').toUpperCase()}
                       </div>
-                      <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>Workspace</div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#fff', marginBottom: '4px' }}>
+                        {userDisplayName}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', wordBreak: 'break-all', lineHeight: '1.4' }}>
+                        {currentUser?.email || 'No email'}
+                      </div>
                     </div>
                   </div>
 

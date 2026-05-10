@@ -20,6 +20,10 @@ const PromptNode = memo(({ data, selected, id }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [variables, setVariables] = useState(data.variables || []);
   const [isEditing, setIsEditing] = useState(false);
+  const [nodeSize, setNodeSize] = useState({ width: data.width || 280, height: data.height || 'auto' });
+  const [isResizing, setIsResizing] = useState(false);
+  const [textareaHeight, setTextareaHeight] = useState(data.textareaHeight || 200);
+  const [isResizingHeight, setIsResizingHeight] = useState(false);
 
   const {
     label = 'Prompt',
@@ -57,10 +61,6 @@ const PromptNode = memo(({ data, selected, id }) => {
         onPromptChange(id, newValue, connectedTargets);
       }
     }
-    
-    // Auto-resize textarea
-    e.target.style.height = 'auto';
-    e.target.style.height = e.target.scrollHeight + 'px';
   };
 
   // Add variable functionality
@@ -95,17 +95,79 @@ const PromptNode = memo(({ data, selected, id }) => {
     { icon: Trash2, label: 'Clear', action: () => setPromptText('') }
   ];
 
+  // Handle resize
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = nodeSize.width;
+    
+    const handleMouseMove = (e) => {
+      const deltaX = e.clientX - startX;
+      const newWidth = Math.max(350, Math.min(700, startWidth + deltaX));
+      setNodeSize({ ...nodeSize, width: newWidth });
+      
+      // Update data
+      if (onDataChange) {
+        onDataChange(id, { ...data, width: newWidth });
+      }
+    };
+    
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  // Handle node bottom resize
+  const handleBottomResize = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizingHeight(true);
+    
+    const startY = e.clientY;
+    const startHeight = textareaHeight;
+    
+    const handleMouseMove = (e) => {
+      const deltaY = e.clientY - startY;
+      const newHeight = Math.max(150, Math.min(700, startHeight + deltaY));
+      setTextareaHeight(newHeight);
+      
+      // Update data
+      if (onDataChange) {
+        onDataChange(id, { ...data, textareaHeight: newHeight });
+      }
+    };
+    
+    const handleMouseUp = () => {
+      setIsResizingHeight(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3 }}
       className={`
-        relative w-[140px] rounded-lg border backdrop-blur-md
+        relative rounded-lg border backdrop-blur-md
         ${selected ? 'ring-2 ring-purple-400/50 ring-offset-1 ring-offset-black border-purple-400/60' : 'border-white/20'}
         bg-black/90 backdrop-blur-md
         shadow-xl transition-all duration-300
       `}
+      style={{ width: nodeSize.width }}
     >
       {/* Output Handle */}
       {hasOutput && (
@@ -118,12 +180,12 @@ const PromptNode = memo(({ data, selected, id }) => {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between p-1.5 border-b border-white/10">
-        <div className="flex items-center space-x-1">
-          <div className="p-0.5 rounded bg-purple-500/20 border border-purple-400/30">
-            <Type size={8} className="text-purple-400" />
+      <div className="flex items-center justify-between p-3 border-b border-white/10">
+        <div className="flex items-center space-x-2">
+          <div className="p-1 rounded bg-purple-500/20 border border-purple-400/30">
+            <Type size={14} className="text-purple-400" />
           </div>
-          <h3 className="text-[10px] font-medium text-white truncate">
+          <h3 className="text-xs font-semibold text-white truncate">
             {label}
           </h3>
         </div>
@@ -132,9 +194,9 @@ const PromptNode = memo(({ data, selected, id }) => {
         <div className="relative">
           <button
             onClick={() => setShowMenu(!showMenu)}
-            className="p-0.5 hover:bg-white/10 rounded transition-colors"
+            className="p-1 hover:bg-white/10 rounded transition-colors"
           >
-            <MoreHorizontal size={10} className="text-white/60" />
+            <MoreHorizontal size={16} className="text-white/60" />
           </button>
 
           {/* Dropdown Menu */}
@@ -155,9 +217,9 @@ const PromptNode = memo(({ data, selected, id }) => {
                         action.action();
                         setShowMenu(false);
                       }}
-                      className="flex items-center space-x-2 w-full px-3 py-2 text-xs text-white/70 hover:bg-white/10 transition-colors"
+                      className="flex items-center space-x-2 w-full px-3 py-2 text-[10px] text-white/70 hover:bg-white/10 transition-colors"
                     >
-                      <Icon size={12} />
+                      <Icon size={11} />
                       <span>{action.label}</span>
                     </button>
                   );
@@ -169,15 +231,15 @@ const PromptNode = memo(({ data, selected, id }) => {
       </div>
 
       {/* Prompt Text Area */}
-      <div className="p-1.5">
+      <div className="p-3">
         <textarea
           value={promptText}
           onChange={handlePromptChange}
           placeholder="Enter prompt..."
           className={`
-            w-full min-h-[60px] max-h-[120px] p-1.5 
-            bg-gray-800/50 border border-white/10 rounded 
-            text-white placeholder-white/40 text-[9px]
+            w-full p-3
+            bg-gray-800/50 border border-white/10 rounded-lg
+            text-white placeholder-white/40
             resize-none backdrop-blur-sm 
             focus:border-purple-400/40 focus:outline-none focus:ring-1 focus:ring-purple-400/20
             transition-all duration-200
@@ -185,18 +247,20 @@ const PromptNode = memo(({ data, selected, id }) => {
           `}
           style={{
             fontFamily: 'Inter, system-ui, sans-serif',
-            fontSize: '9px',
-            lineHeight: '1.3'
+            fontSize: '12px',
+            lineHeight: '1.6',
+            height: `${textareaHeight}px`,
+            maxHeight: '700px'
           }}
         />
 
         {/* Variables Display */}
         {variables.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-0.5">
+          <div className="mt-2 flex flex-wrap gap-1">
             {variables.map((variable, index) => (
               <span
                 key={index}
-                className="px-1 py-0.5 text-[8px] bg-purple-500/20 border border-purple-400/30 rounded text-purple-300"
+                className="px-2 py-1 text-[10px] bg-purple-500/20 border border-purple-400/30 rounded text-purple-300"
               >
                 {`{${variable}}`}
               </span>
@@ -206,24 +270,39 @@ const PromptNode = memo(({ data, selected, id }) => {
       </div>
 
       {/* Add Variable Button */}
-      <div className="p-1.5 pt-0">
+      <div className="px-3 pb-3">
         <button
           onClick={addVariable}
-          className="flex items-center space-x-0.5 text-[9px] text-white/60 hover:text-white/80 transition-colors group"
+          className="flex items-center space-x-1 text-[10px] text-white/60 hover:text-white/80 transition-colors group"
         >
-          <Plus size={8} className="group-hover:scale-110 transition-transform" />
-          <span>Add</span>
+          <Plus size={12} className="group-hover:scale-110 transition-transform" />
+          <span>Add variable</span>
         </button>
       </div>
 
+      {/* Bottom Resize Handle */}
+      <div
+        onMouseDown={handleBottomResize}
+        className={`
+          nodrag
+          absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize
+          flex items-center justify-center
+          hover:bg-purple-500/10 transition-colors
+          ${isResizingHeight ? 'bg-purple-500/20' : ''}
+        `}
+        style={{ borderBottomLeftRadius: '0.5rem', borderBottomRightRadius: '0.5rem' }}
+      >
+        <div className="w-16 h-1 bg-white/30 rounded-full" />
+      </div>
+
       {/* Character Count */}
-      <div className="absolute bottom-1 right-1.5 text-[8px] text-white/40">
+      <div className="absolute bottom-4 right-3 text-[10px] text-white/40">
         {promptText.length}
       </div>
 
       {/* Status Indicator */}
-      <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-purple-500 rounded-full border border-gray-900 flex items-center justify-center">
-        <div className="w-1 h-1 bg-white rounded-full animate-pulse" />
+      <div className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-purple-500 rounded-full border-2 border-gray-900 flex items-center justify-center">
+        <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
       </div>
     </motion.div>
   );

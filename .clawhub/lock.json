@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "ui-ux-design": {
+      "version": "1.0.0",
+      "installedAt": 1777998555931
+    },
+    "minimalist-ui": {
+      "version": "0.1.0",
+      "installedAt": 1777998560775
+    },
+    "frontend-dev": {
+      "version": "0.1.1",
+      "installedAt": 1777998565691
+    }
+  }
+}

@@ -587,6 +587,138 @@ engine.registerNodeProcessor('ghostNode', async (data, inputs) => {
   throw new Error(`No processor for ghostNode with nodeType: ${data.nodeType}, pillar: ${data.pillar}`);
 });
 
+// Email node processors
+engine.registerNodeProcessor('emailAccountNode', async (data) => {
+  return {
+    type: 'email-credentials',
+    email:    data.email,
+    password: data.password,
+    provider: data.provider || 'gmail',
+    host:     data.value?.host || 'smtp.gmail.com',
+    port:     data.value?.port || 587,
+  };
+});
+
+engine.registerNodeProcessor('readEmailNode', async (data, inputs) => {
+  const token = localStorage.getItem('office_weave_token') || localStorage.getItem('auth_token');
+  const creds = inputs?.email ? inputs : null;
+  if (!creds?.email || !creds?.password) {
+    return { type: 'email-list', emails: [], count: 0, error: 'No credentials' };
+  }
+  const response = await fetch('https://back-end-auto-office-f8xt.vercel.app/api/email/read', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      provider: creds.provider === 'gmail' ? 'imap' : (creds.provider || 'imap'),
+      config: {
+        provider: creds.provider === 'gmail' ? 'imap' : (creds.provider || 'imap'),
+        host:   creds.host || 'imap.gmail.com',
+        port:   creds.port || 993,
+        secure: (creds.port || 993) === 993,
+        auth:   { user: creds.email, pass: creds.password },
+      },
+      options: {
+        folder:     data.folder     || 'INBOX',
+        limit:      data.limit      || 10,
+        unreadOnly: data.unreadOnly || false,
+      },
+    }),
+  });
+  const result = await response.json();
+  return { type: 'email-list', emails: result.emails || [], count: result.count || 0 };
+});
+
+engine.registerNodeProcessor('filterEmailNode', async (data, inputs) => {
+  const emails = inputs?.emails || [];
+  if (!emails.length) return { type: 'filter-result', matched: [], unmatched: [], matchedCount: 0, unmatchedCount: 0 };
+  const token = localStorage.getItem('office_weave_token') || localStorage.getItem('auth_token');
+  const response = await fetch('https://back-end-auto-office-f8xt.vercel.app/api/email/filter', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      emails,
+      config: { logic: data.logic || 'AND', rules: data.rules || [] },
+    }),
+  });
+  const result = await response.json();
+  return {
+    type: 'filter-result',
+    matched:        result.matched        || [],
+    unmatched:      result.unmatched      || [],
+    matchedCount:   result.matchedCount   || 0,
+    unmatchedCount: result.unmatchedCount || 0,
+  };
+});
+
+engine.registerNodeProcessor('emailTemplateNode', async (data) => {
+  const varData = Object.fromEntries((data.variables || []).map(v => [v.key, v.value]));
+  const renderLocal = (text) => {
+    let out = text || '';
+    Object.entries(varData).forEach(([k, v]) => {
+      out = out.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), v || `{{${k}}}`);
+    });
+    return out;
+  };
+  return {
+    type:    'template-result',
+    subject: renderLocal(data.subject),
+    text:    data.bodyType !== 'html' ? renderLocal(data.body) : undefined,
+    html:    data.bodyType !== 'text' ? renderLocal(data.body) : undefined,
+  };
+});
+
+engine.registerNodeProcessor('sendEmailNode', async (data, inputs) => {
+  const token = localStorage.getItem('office_weave_token') || localStorage.getItem('auth_token');
+  const creds = inputs?.email ? inputs : null;
+  if (!creds?.email || !creds?.password) {
+    return { type: 'email-sent', success: false, error: 'No credentials' };
+  }
+  const subject = inputs?.subject || data.subject || '';
+  const body    = inputs?.text    || inputs?.html || data.body || '';
+  const to      = data.to || '';
+  if (!to || !subject) {
+    return { type: 'email-sent', success: false, error: 'Missing to/subject' };
+  }
+  const response = await fetch('https://back-end-auto-office-f8xt.vercel.app/api/email/send', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      provider: 'smtp',
+      config: {
+        provider: 'smtp',
+        host:   creds.host || 'smtp.gmail.com',
+        port:   creds.port || 587,
+        secure: false,
+        auth:   { user: creds.email, pass: creds.password },
+      },
+      email: {
+        to:      to.split(',').map(e => ({ email: e.trim() })),
+        subject,
+        text:    body,
+        html:    inputs?.html || `<p>${body.replace(/\n/g, '<br>')}</p>`,
+      },
+    }),
+  });
+  const result = await response.json();
+  return {
+    type:      'email-sent',
+    success:   result.success || false,
+    messageId: result.messageId,
+    timestamp: result.timestamp,
+    to,
+    subject,
+  };
+});
+
 console.log('✅ All processors registered');
 console.log('📋 Available processors:', Array.from(engine.nodeRegistry.keys()));
 
