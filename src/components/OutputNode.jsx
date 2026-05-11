@@ -16,6 +16,7 @@ const OutputNode = memo(({ data, selected, id }) => {
   const [collapsed, setCollapsed]     = useState(false);
   const [displayResult, setDisplayResult] = useState(data.result || null);
   const [isUpdating, setIsUpdating]   = useState(false);
+  const [isNodeHovered, setIsNodeHovered] = useState(false);
   const prevResultRef = useRef(null);
 
   const {
@@ -87,10 +88,33 @@ const OutputNode = memo(({ data, selected, id }) => {
         background: 'linear-gradient(135deg,rgba(20,20,24,0.97) 0%,rgba(10,10,14,0.99) 100%)',
         width: 360,
       }}
+      onMouseEnter={() => setIsNodeHovered(true)}
+      onMouseLeave={() => setIsNodeHovered(false)}
     >
-      <Handle type="target" position={Position.Left}
-        className="w-3 h-3 border-2 border-yellow-400/60 bg-yellow-500/20"
-        style={{ left: -6 }} />
+      <div
+        className="absolute"
+        style={{ left: -6, top: '50%', transform: 'translateY(-50%)' }}
+      >
+        <Handle type="target" position={Position.Left}
+          className="w-3 h-3 border-2 border-yellow-400/60 bg-yellow-500/20 !relative !transform-none !inset-auto"
+        />
+        <AnimatePresence>
+          {isNodeHovered && (
+            <motion.div
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -6 }}
+              transition={{ duration: 0.15 }}
+              style={{ right: 'calc(100% + 8px)', top: '50%', transform: 'translateY(-50%)', position: 'absolute' }}
+              className="whitespace-nowrap pointer-events-none"
+            >
+              <span className="text-xs font-semibold text-yellow-400" style={{ textShadow: '0 0 10px rgba(251,191,36,0.9)' }}>
+                Input
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/10">

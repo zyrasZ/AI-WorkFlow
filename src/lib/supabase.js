@@ -14,23 +14,16 @@ export async function getGmailToken() {
   try {
     const { data: { session }, error } = await supabase.auth.getSession();
     if (error || !session) {
-      console.warn('⚠️ getGmailToken: No Supabase session found');
+      // Silent — no session is normal when not logged in
       return null;
     }
 
     const accessToken  = session.provider_token;
     const refreshToken = session.provider_refresh_token;
 
-    console.log('🔍 Supabase session check:', {
-      hasProviderToken: !!accessToken,
-      hasRefreshToken: !!refreshToken,
-      provider: session.user?.app_metadata?.provider,
-    });
-
     if (accessToken) {
       localStorage.setItem('gmail_access_token', accessToken);
       if (refreshToken) localStorage.setItem('gmail_refresh_token', refreshToken);
-      console.log('✅ Gmail token retrieved from Supabase session');
     }
 
     return accessToken || null;
@@ -67,16 +60,55 @@ export async function signInWithGoogle() {
 }
 
 /**
+ * Sign in with Google but force account selection screen.
+ * Used when user wants to authorize a DIFFERENT Google account for a specific node.
+ * Saves the nodeId to sessionStorage so after redirect we know which node to update.
+ */
+export async function signInWithGoogleSelectAccount(nodeId) {
+  if (nodeId) {
+    sessionStorage.setItem('oauth_target_node_id', nodeId);
+  }
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      scopes: 'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify',
+      redirectTo: window.location.origin,
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'select_account consent',
+      },
+    },
+  });
+
+  if (error) {
+    console.error('❌ Supabase Google OAuth (select account) error:', error.message);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
  * Listen for Supabase auth state changes and store provider_token.
  * Call this once at app startup.
+ * If sessionStorage has 'oauth_target_node_id', dispatches a per-node token event
+ * so that specific EmailAccountNode can update its own token without affecting others.
  */
 export function listenForAuthChanges() {
   supabase.auth.onAuthStateChange((event, session) => {
+    // Skip noisy non-actionable events
+    if (event === 'INITIAL_SESSION') return;
     console.log('🔄 Supabase auth event:', event);
     
     if (event === 'SIGNED_IN' && session) {
       const providerToken = session.provider_token;
       const providerRefreshToken = session.provider_refresh_token;
+
+      // Store access token for API calls
+      if (session.access_token) {
+        localStorage.setItem('office_weave_token', session.access_token);
+      }
 
       if (providerToken) {
         localStorage.setItem('gmail_access_token', providerToken);
@@ -96,10 +128,29 @@ export function listenForAuthChanges() {
           provider: session.user.app_metadata?.provider || 'google',
         };
         localStorage.setItem('user_data', JSON.stringify(userData));
+        
+        // Dispatch auth-changed event so App.jsx can navigate
+        window.dispatchEvent(new CustomEvent('auth-changed', { detail: userData }));
       }
 
-      // Notify other components
-      window.dispatchEvent(new CustomEvent('gmail-token-updated', { detail: { hasToken: !!providerToken } }));
+      // Check if this login was triggered for a specific node
+      const targetNodeId = sessionStorage.getItem('oauth_target_node_id');
+      if (targetNodeId && providerToken) {
+        sessionStorage.removeItem('oauth_target_node_id');
+        // Dispatch per-node event so only that EmailAccountNode updates its token
+        window.dispatchEvent(new CustomEvent('gmail-node-token-updated', {
+          detail: {
+            nodeId: targetNodeId,
+            accessToken: providerToken,
+            refreshToken: providerRefreshToken || '',
+            email: session.user?.email || '',
+          }
+        }));
+        console.log(`✅ Per-node Gmail token dispatched for node: ${targetNodeId}`);
+      } else {
+        // Global token update — notify all nodes
+        window.dispatchEvent(new CustomEvent('gmail-token-updated', { detail: { hasToken: !!providerToken } }));
+      }
     }
 
     if (event === 'TOKEN_REFRESHED' && session) {

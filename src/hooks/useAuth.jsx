@@ -40,12 +40,10 @@ export function AuthProvider({ children }) {
   async function checkAuth() {
     try {
       setLoading(true)
-      console.log('Checking authentication...')
       
       // Check if we have a token first
       const token = localStorage.getItem('office_weave_token')
       if (!token) {
-        console.log('No token found, skipping auth check')
         setUser(null)
         setLoading(false)
         return

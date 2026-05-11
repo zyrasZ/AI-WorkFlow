@@ -278,6 +278,110 @@ export const apiClient = {
     })
   },
 
+  // ==================== WORKFLOW EXECUTION (SERVER-SIDE) ====================
+
+  /**
+   * Validate workflow before execution
+   * @param {string} workflowId - Workflow ID
+   * @returns {Promise<{data: {valid: boolean, errors: Array, warnings: Array}}>}
+   */
+  async validateWorkflow(workflowId) {
+    return request(`/api/workflows/${workflowId}/validate`)
+  },
+
+  /**
+   * Execute workflow on server-side
+   * @param {string} workflowId - Workflow ID
+   * @param {object} input - Optional input data for the workflow
+   * @returns {Promise<{data: {executionId: string, status: string, message: string}}>}
+   */
+  async executeWorkflow(workflowId, input = {}) {
+    return request(`/api/workflows/${workflowId}/execute`, {
+      method: 'POST',
+      body: JSON.stringify({ input }),
+    })
+  },
+
+  // ==================== TRIGGERS ====================
+
+  /**
+   * Get triggers for a workflow
+   * @param {string} workflowId - Workflow ID
+   * @returns {Promise<{data: {triggers: Array}}>}
+   */
+  async getTriggers(workflowId) {
+    return request(`/api/workflows/${workflowId}/triggers`)
+  },
+
+  /**
+   * Create a new trigger for a workflow
+   * @param {string} workflowId - Workflow ID
+   * @param {object} trigger - Trigger configuration
+   * @param {'schedule'|'email'|'webhook'} trigger.type - Trigger type
+   * @param {object} trigger.config - Trigger-specific config
+   * @param {boolean} trigger.is_active - Whether trigger is active
+   * @returns {Promise<{data: object}>}
+   */
+  async createTrigger(workflowId, trigger) {
+    return request(`/api/workflows/${workflowId}/triggers`, {
+      method: 'POST',
+      body: JSON.stringify(trigger),
+    })
+  },
+
+  /**
+   * Get webhook trigger info
+   * @param {string} workflowId - Workflow ID
+   * @param {string} triggerId - Trigger ID
+   * @returns {Promise<{data: object}>}
+   */
+  async getWebhookInfo(workflowId, triggerId) {
+    return request(`/api/workflows/${workflowId}/webhook/${triggerId}`)
+  },
+
+  // ==================== NODE TYPES ====================
+
+  /**
+   * Get available node types from backend
+   * @returns {Promise<{data: {nodes: Array}}>}
+   */
+  async getNodeTypes() {
+    return request('/api/node-types')
+  },
+
+  // ==================== IMPORT / EXPORT ====================
+
+  /**
+   * Export a single workflow
+   * @param {string} workflowId - Workflow ID
+   * @returns {Promise<{data: object}>}
+   */
+  async exportWorkflow(workflowId) {
+    return request(`/api/workflows/${workflowId}/export`)
+  },
+
+  /**
+   * Export multiple workflows
+   * @param {string[]} workflowIds - Array of workflow IDs
+   * @returns {Promise<{data: object}>}
+   */
+  async exportWorkflows(workflowIds) {
+    const ids = workflowIds.join(',')
+    return request(`/api/workflows/export?ids=${ids}`)
+  },
+
+  /**
+   * Import workflows from JSON data
+   * @param {object} importData - Import payload (single or multiple workflows)
+   * @returns {Promise<{data: {success: boolean, successCount: number, failedCount: number, importedWorkflowIds: Array}}>}
+   */
+  async importWorkflows(importData) {
+    return request('/api/workflows/import', {
+      method: 'POST',
+      body: JSON.stringify(importData),
+    })
+  },
+
   // ==================== AI METHODS ====================
 
   /**

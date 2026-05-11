@@ -33,6 +33,7 @@ const EmailTemplateNode = memo(({ data, selected, id }) => {
   const [savedId, setSavedId]           = useState(data.savedTemplateId || null);
   const [error, setError]               = useState('');
   const [activeTab, setActiveTab]       = useState('edit'); // 'edit'|'vars'|'preview'
+  const [isNodeHovered, setIsNodeHovered] = useState(false);
 
   const { label = 'Email Template', hasInput = true, hasOutput = true } = data;
 
@@ -229,16 +230,60 @@ const EmailTemplateNode = memo(({ data, selected, id }) => {
         bg-black/90 shadow-xl transition-all duration-300
       `}
       style={{ width: 360 }}
+      onMouseEnter={() => setIsNodeHovered(true)}
+      onMouseLeave={() => setIsNodeHovered(false)}
     >
       {hasInput && (
-        <Handle type="target" position={Position.Left}
-          className="w-3 h-3 border-2 border-emerald-400/60 bg-emerald-500/20"
-          style={{ left: -6 }} />
+        <div
+          className="absolute"
+          style={{ left: -6, top: '50%', transform: 'translateY(-50%)' }}
+        >
+          <Handle type="target" position={Position.Left}
+            className="w-3 h-3 border-2 border-emerald-400/60 bg-emerald-500/20 !relative !transform-none !inset-auto"
+          />
+          <AnimatePresence>
+            {isNodeHovered && (
+              <motion.div
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -6 }}
+                transition={{ duration: 0.15 }}
+                style={{ right: 'calc(100% + 8px)', top: '50%', transform: 'translateY(-50%)', position: 'absolute' }}
+                className="whitespace-nowrap pointer-events-none"
+              >
+                <span className="text-xs font-semibold text-emerald-400" style={{ textShadow: '0 0 10px rgba(52,211,153,0.9)' }}>
+                  Variables
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       )}
       {hasOutput && (
-        <Handle type="source" position={Position.Right}
-          className="w-3 h-3 border-2 border-emerald-400/60 bg-emerald-500/20"
-          style={{ right: -6 }} />
+        <div
+          className="absolute"
+          style={{ right: -6, top: '50%', transform: 'translateY(-50%)' }}
+        >
+          <Handle type="source" position={Position.Right}
+            className="w-3 h-3 border-2 border-emerald-400/60 bg-emerald-500/20 !relative !transform-none !inset-auto"
+          />
+          <AnimatePresence>
+            {isNodeHovered && (
+              <motion.div
+                initial={{ opacity: 0, x: 6 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 6 }}
+                transition={{ duration: 0.15 }}
+                style={{ left: 'calc(100% + 8px)', top: '50%', transform: 'translateY(-50%)', position: 'absolute' }}
+                className="whitespace-nowrap pointer-events-none"
+              >
+                <span className="text-xs font-semibold text-emerald-400" style={{ textShadow: '0 0 10px rgba(52,211,153,0.9)' }}>
+                  Template
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       )}
 
       {/* ── Header ── */}

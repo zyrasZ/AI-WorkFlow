@@ -1,6 +1,6 @@
 import { memo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, FileText, Zap, FileOutput, Mail } from 'lucide-react';
+import { Search, FileText, Zap, FileOutput, Mail, GitBranch, Shuffle, RefreshCw, Clock, Merge } from 'lucide-react';
 import SectionContent from './SectionContent';
 import FilesPanel from './FilesPanel';
 
@@ -92,6 +92,52 @@ const LibraryPanel = memo(({ activeSection, isVisible, onOpenFile, onCreateFile 
           description: 'Hiển thị response từ AI',
           badge: 'NEW',
           badgeColor: '#f59e0b',
+        },
+      ],
+    },
+    {
+      section: 'LOGIC',
+      color: '#a78bfa',
+      nodes: [
+        {
+          id: 'if-else',
+          icon: GitBranch,
+          label: 'IF / ELSE',
+          description: 'Rẽ nhánh theo điều kiện true/false',
+          badge: 'LOGIC',
+          badgeColor: '#f59e0b',
+        },
+        {
+          id: 'switch',
+          icon: Shuffle,
+          label: 'SWITCH',
+          description: 'Rẽ nhiều nhánh theo giá trị case',
+          badge: 'LOGIC',
+          badgeColor: '#8b5cf6',
+        },
+        {
+          id: 'loop',
+          icon: RefreshCw,
+          label: 'LOOP',
+          description: 'Lặp qua từng phần tử của mảng',
+          badge: 'LOGIC',
+          badgeColor: '#06b6d4',
+        },
+        {
+          id: 'delay',
+          icon: Clock,
+          label: 'DELAY',
+          description: 'Trì hoãn dữ liệu theo thời gian',
+          badge: 'LOGIC',
+          badgeColor: '#f97316',
+        },
+        {
+          id: 'merge',
+          icon: Merge,
+          label: 'MERGE',
+          description: 'Gộp nhiều nhánh thành 1 output',
+          badge: 'LOGIC',
+          badgeColor: '#ec4899',
         },
       ],
     },

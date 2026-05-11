@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NOMADS</title>
+    <script>
+      // Surge SPA fallback: redirect to root with original path preserved
+      var path = window.location.pathname;
+      var hash = window.location.hash;
+      var search = window.location.search;
+      if (path !== '/') {
+        window.location.replace('/' + hash + search);
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

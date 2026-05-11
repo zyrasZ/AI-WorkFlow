@@ -24,6 +24,7 @@ const PromptNode = memo(({ data, selected, id }) => {
   const [isResizing, setIsResizing] = useState(false);
   const [textareaHeight, setTextareaHeight] = useState(data.textareaHeight || 200);
   const [isResizingHeight, setIsResizingHeight] = useState(false);
+  const [isNodeHovered, setIsNodeHovered] = useState(false);
 
   const {
     label = 'Prompt',
@@ -168,15 +169,37 @@ const PromptNode = memo(({ data, selected, id }) => {
         shadow-xl transition-all duration-300
       `}
       style={{ width: nodeSize.width }}
+      onMouseEnter={() => setIsNodeHovered(true)}
+      onMouseLeave={() => setIsNodeHovered(false)}
     >
       {/* Output Handle */}
       {hasOutput && (
-        <Handle
-          type="source"
-          position={Position.Right}
-          className="w-3 h-3 border-2 border-purple-400/60 bg-purple-500/20 backdrop-blur-sm"
-          style={{ right: -6 }}
-        />
+        <div
+          className="absolute"
+          style={{ right: -6, top: '50%', transform: 'translateY(-50%)' }}
+        >
+          <Handle
+            type="source"
+            position={Position.Right}
+            className="w-3 h-3 border-2 border-purple-400/60 bg-purple-500/20 backdrop-blur-sm !relative !transform-none !inset-auto"
+          />
+          <AnimatePresence>
+            {isNodeHovered && (
+              <motion.div
+                initial={{ opacity: 0, x: 6 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 6 }}
+                transition={{ duration: 0.15 }}
+                style={{ left: 'calc(100% + 8px)', top: '50%', transform: 'translateY(-50%)', position: 'absolute' }}
+                className="whitespace-nowrap pointer-events-none"
+              >
+                <span className="text-xs font-semibold text-purple-400" style={{ textShadow: '0 0 10px rgba(192,132,252,0.9)' }}>
+                  Prompt
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       )}
 
       {/* Header */}

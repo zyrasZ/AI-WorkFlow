@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { getGmailToken, listenForAuthChanges } from './lib/supabase'
+import { getGmailToken, listenForAuthChanges, supabase } from './lib/supabase'
 import LandingPage from './components/LandingPage'
 import NomadsBackground from './components/NomadsBackground'
 import SignIn from './components/SignIn'
@@ -24,6 +24,11 @@ import SendEmailNode from './components/SendEmailNode'
 import ReadEmailNode from './components/ReadEmailNode'
 import FilterEmailNode from './components/FilterEmailNode'
 import EmailTemplateNode from './components/EmailTemplateNode'
+import IfElseNode from './components/IfElseNode'
+import SwitchNode from './components/SwitchNode'
+import LoopNode from './components/LoopNode'
+import DelayNode from './components/DelayNode'
+import MergeNode from './components/MergeNode'
 import NeonEdge from './components/NeonEdge'
 import FigmaWeaveBackground from './components/FigmaWeaveBackground'
 import DebugInfo from './components/DebugInfo'
@@ -69,6 +74,11 @@ const nodeTypes = {
   readEmailNode: ReadEmailNode,
   filterEmailNode: FilterEmailNode,
   emailTemplateNode: EmailTemplateNode,
+  ifElseNode: IfElseNode,
+  switchNode: SwitchNode,
+  loopNode: LoopNode,
+  delayNode: DelayNode,
+  mergeNode: MergeNode,
 }
 const edgeTypes = { neonEdge: NeonEdge }
 
@@ -113,6 +123,27 @@ export default function App() {
         console.log('✅ Gmail token available on mount');
       }
     });
+
+    // Listen for auth-changed event from Supabase onAuthStateChange
+    // This handles the case where Supabase detects SIGNED_IN before URL callback runs
+    const handleAuthChanged = (e) => {
+      const userData = e.detail;
+      if (userData && userData.email && localStorage.getItem('office_weave_token')) {
+        console.log('✅ Auth changed event — navigating to projects');
+        setShowLanding(false);
+        setShowSignIn(false);
+        setShowSignUp(false);
+        setShowProjectManagement(true);
+        setProjectManagementKey(k => k + 1);
+        setNavigationHistory(['projects']);
+        window.history.replaceState({ page: 'projects' }, '', '#/projects');
+      }
+    };
+    window.addEventListener('auth-changed', handleAuthChanged);
+
+    return () => {
+      window.removeEventListener('auth-changed', handleAuthChanged);
+    };
   }, []);
 
   // ✅ Handle Google OAuth callback at App level
@@ -421,14 +452,27 @@ export default function App() {
   }, [])
 
   // Handle logout
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem('auth_token')
-    setShowProjectManagement(false)
-    setShowLanding(true)
-    setCurrentProject(null)
-    setNavigationHistory(['landing'])
-    window.history.pushState({ page: 'landing' }, '', '#/')
-  }, [])
+  const handleLogout = useCallback(async () => {
+    // Sign out from Supabase — clears session from localStorage
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn('Supabase signOut error:', e.message);
+    }
+
+    // Clear all local auth data
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('office_weave_token');
+    localStorage.removeItem('user_data');
+    localStorage.removeItem('gmail_access_token');
+    localStorage.removeItem('gmail_refresh_token');
+
+    setShowProjectManagement(false);
+    setShowLanding(true);
+    setCurrentProject(null);
+    setNavigationHistory(['landing']);
+    window.history.pushState({ page: 'landing' }, '', '#/');
+  }, []);
 
   // Navigate from landing to sign in
   const navigateToSignIn = useCallback(() => {
@@ -478,8 +522,12 @@ export default function App() {
 
   // Sync with browser history
   useEffect(() => {
-    // Set initial landing page state
-    if (!window.history.state) {
+    // Set initial landing page state — but NOT if we're processing an OAuth callback
+    const params = new URLSearchParams(window.location.search)
+    const hashParams = new URLSearchParams(window.location.hash.replace('#', ''))
+    const isOAuthCallback = !!(params.get('access_token') || hashParams.get('access_token'))
+
+    if (!window.history.state && !isOAuthCallback) {
       window.history.replaceState({ page: 'landing' }, '', '#/')
     }
 
@@ -555,16 +603,21 @@ export default function App() {
               
               // Restore nodes with callbacks
               if (project.nodes && project.nodes.length > 0) {
-                const restoredNodes = project.nodes.map(node => ({
-                  ...node,
-                  data: {
-                    ...node.data,
-                    onDataChange: handleNodeDataChange,
-                    onNodeResult: handleNodeResult,
-                    getNodes: () => reactFlowInstance?.getNodes() || [],
-                    getEdges: () => reactFlowInstance?.getEdges() || [],
-                  }
-                }));
+                const restoredNodes = project.nodes.map(node => {
+                  const registryNode = nodeRegistry.nodeTypes?.get(node.data?.nodeType);
+                  const processor = registryNode?.processor || node.data?.processor || undefined;
+                  return {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      processor,
+                      onDataChange: handleNodeDataChange,
+                      onNodeResult: handleNodeResult,
+                      getNodes: () => reactFlowInstance?.getNodes() || [],
+                      getEdges: () => reactFlowInstance?.getEdges() || [],
+                    }
+                  };
+                });
                 setNodes(restoredNodes);
               }
               
@@ -620,16 +673,22 @@ export default function App() {
       // Restore nodes with callbacks
       if (nodes && nodes.length > 0) {
         console.log('🔄 Restoring nodes...');
-        const restoredNodes = nodes.map(node => ({
-          ...node,
-          data: {
-            ...node.data,
-            onDataChange: handleNodeDataChange,
-            onNodeResult: handleNodeResult,
-            getNodes: () => reactFlowInstance?.getNodes() || [],
-            getEdges: () => reactFlowInstance?.getEdges() || [],
-          }
-        }));
+        const restoredNodes = nodes.map(node => {
+          // Re-inject processor from registry (lost during JSON serialization)
+          const registryNode = nodeRegistry.nodeTypes?.get(node.data?.nodeType);
+          const processor = registryNode?.processor || node.data?.processor || undefined;
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              processor,
+              onDataChange: handleNodeDataChange,
+              onNodeResult: handleNodeResult,
+              getNodes: () => reactFlowInstance?.getNodes() || [],
+              getEdges: () => reactFlowInstance?.getEdges() || [],
+            }
+          };
+        });
         setNodes(restoredNodes);
         console.log('✅ Restored nodes:', restoredNodes.length, restoredNodes);
       } else {
@@ -940,10 +999,10 @@ export default function App() {
     // Pane click handler - currently not used but kept for future features
   }, [])
 
-  // Execute workflow with REAL API integration
+  // Execute workflow with SERVER-SIDE execution
   const handleRunWorkflow = async () => {
     if (isExecuting) {
-      engine.stop();
+      // Cancel execution — just reset UI state (server will timeout on its own)
       setIsExecuting(false);
       setExecutionProgress(null);
       return;
@@ -956,94 +1015,227 @@ export default function App() {
       return;
     }
 
-    // Lấy nodes và edges mới nhất từ React Flow instance
+    // Must have a saved project to execute server-side
+    if (!currentProject || !currentProject.id) {
+      alert('Vui lòng lưu workflow trước khi chạy');
+      return;
+    }
+
+    // Save current state to backend first (ensure latest nodes/edges are persisted)
     const currentNodes = reactFlowInstance?.getNodes() || nodes;
     const currentEdges = reactFlowInstance?.getEdges() || edges;
 
-    console.log('🚀 Starting workflow with nodes:', currentNodes.map(n => ({
-      id: n.id,
-      type: n.type,
-      label: n.data.label,
-      value: n.data.value,
-      prompt: n.data.prompt
-    })));
+    console.log('🚀 Starting server-side workflow execution...');
+    console.log('📋 Nodes:', currentNodes.map(n => ({ id: n.id, type: n.type, label: n.data.label })));
 
     setIsExecuting(true);
-    setExecutionProgress({ current: 0, total: currentNodes.length, status: 'starting' });
+    setExecutionProgress({ current: 0, total: currentNodes.length, status: 'saving' });
 
     try {
-      // Execute graph with real API calls using CURRENT nodes
-      const results = await engine.executeGraph(currentNodes, currentEdges, (progress) => {
-        setExecutionProgress(progress);
+      // Step 1: Save latest nodes/edges to backend
+      const serializedNodes = currentNodes.map(node => ({
+        id: node.id,
+        type: node.type,
+        position: node.position,
+        data: {
+          label: node.data.label,
+          nodeType: node.data.nodeType,
+          color: node.data.color,
+          // Node-specific config
+          condition: node.data.condition,
+          switchKey: node.data.switchKey,
+          cases: node.data.cases,
+          iteratorKey: node.data.iteratorKey,
+          itemVar: node.data.itemVar,
+          delayAmount: node.data.delayAmount,
+          unit: node.data.unit,
+          inputCount: node.data.inputCount,
+          mergeStrategy: node.data.mergeStrategy,
+          prompt: node.data.prompt,
+          value: node.data.value,
+          variables: node.data.variables,
+          to: node.data.to,
+          subject: node.data.subject,
+          body: node.data.body,
+          cc: node.data.cc,
+          bcc: node.data.bcc,
+          isHtmlMode: node.data.isHtmlMode,
+          folder: node.data.folder,
+          limit: node.data.limit,
+          unreadOnly: node.data.unreadOnly,
+          logic: node.data.logic,
+          rules: node.data.rules,
+          bodyType: node.data.bodyType,
+          email: node.data.email,
+          mode: node.data.mode,
+          smtpProvider: node.data.smtpProvider,
+          model: node.data.model,
+          temperature: node.data.temperature,
+          maxTokens: node.data.maxTokens,
+          hasInput: node.data.hasInput,
+          hasOutput: node.data.hasOutput,
+        },
+      }));
+
+      const serializedEdges = currentEdges.map(edge => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle,
+        targetHandle: edge.targetHandle,
+        type: edge.type,
+      }));
+
+      await apiClient.updateWorkflow(currentProject.id, {
+        nodes: serializedNodes,
+        edges: serializedEdges,
+        metadata: { nodes: serializedNodes, edges: serializedEdges },
       });
 
-      console.log('Workflow execution completed:', results);
+      console.log('✅ Workflow saved, starting validation...');
+      setExecutionProgress({ current: 0, total: currentNodes.length, status: 'validating' });
 
-      // Update nodes with results and sync to connected nodes
-      results.forEach(result => {
-        if (result.success && result.data) {
-          // Update the node itself
-          setNodes(nds => nds.map(node => 
-            node.id === result.nodeId 
-              ? { 
-                  ...node, 
-                  data: { 
-                    ...node.data, 
-                    result: result.data,
-                    lastExecuted: new Date().toISOString(),
-                    status: 'success'
-                  } 
-                }
-              : node
-          ));
+      // Step 2: Validate workflow
+      let validation;
+      try {
+        validation = await apiClient.validateWorkflow(currentProject.id);
+        const validationData = validation.data || validation;
 
-          // Immediately sync to connected downstream nodes
-          const connectedTargets = currentEdges
-            .filter(e => e.source === result.nodeId)
-            .map(e => e.target);
-          
-          if (connectedTargets.length > 0) {
-            console.log('📤 Syncing result from', result.nodeId, 'to', connectedTargets);
-            
-            // Use setTimeout to ensure state is updated
-            setTimeout(() => {
-              setNodes(nds => nds.map(node => 
-                connectedTargets.includes(node.id)
-                  ? { 
-                      ...node, 
-                      data: { 
-                        ...node.data, 
-                        result: result.data,
-                        lastExecuted: new Date().toISOString(),
-                        status: 'success'
-                      } 
-                    }
-                  : node
-              ));
-            }, 100);
+        if (validationData.valid === false) {
+          const errors = validationData.errors || [];
+          alert(`Workflow có lỗi:\n${errors.map(e => e.message).join('\n')}`);
+          setIsExecuting(false);
+          setExecutionProgress(null);
+          return;
+        }
+
+        if (validationData.warnings && validationData.warnings.length > 0) {
+          const proceed = confirm(
+            `Workflow có cảnh báo:\n${validationData.warnings.map(w => w.message).join('\n')}\n\nBạn có muốn tiếp tục?`
+          );
+          if (!proceed) {
+            setIsExecuting(false);
+            setExecutionProgress(null);
+            return;
           }
         }
-      });
+      } catch (validateErr) {
+        // If validate endpoint doesn't exist yet, skip validation and proceed
+        console.warn('⚠️ Validate endpoint not available, skipping:', validateErr.message);
+      }
 
-      // Reset edge animations after completion
-      setTimeout(() => {
-        setEdges(eds => eds.map(edge => ({ 
-          ...edge, 
-          data: { ...edge.data, success: false, animated: false } 
-        })));
-      }, 3000);
+      console.log('✅ Validation passed, executing...');
+      setExecutionProgress({ current: 0, total: currentNodes.length, status: 'executing' });
 
-      // Show success message
-      alert('Workflow hoàn thành thành công!');
+      // Step 3: Execute workflow server-side
+      const execResponse = await apiClient.executeWorkflow(currentProject.id, {});
+      const execData = execResponse.data || execResponse;
+      const executionId = execData.executionId || execData.id;
+
+      if (!executionId) {
+        throw new Error('Server did not return an execution ID');
+      }
+
+      console.log('🏃 Execution started, ID:', executionId);
+
+      // Step 4: Poll for execution result
+      let status = execData.status || 'running';
+      let pollCount = 0;
+      const maxPolls = 120; // Max 2 minutes (1s interval)
+
+      while (status === 'running' && pollCount < maxPolls) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        pollCount++;
+
+        try {
+          const pollResponse = await apiClient.getExecution(executionId);
+          const pollData = pollResponse.data || pollResponse;
+          status = pollData.status;
+
+          // Update progress based on node results
+          const completedNodes = pollData.results ? Object.keys(pollData.results).length : 0;
+          setExecutionProgress({
+            current: completedNodes,
+            total: currentNodes.length,
+            status: status === 'running' ? 'executing' : status,
+          });
+
+          if (status === 'completed') {
+            console.log('🎉 Workflow completed!', pollData.results);
+
+            // Update nodes with results from server
+            if (pollData.results) {
+              setNodes(nds => nds.map(node => {
+                const nodeResult = pollData.results[node.id];
+                if (nodeResult && nodeResult.success) {
+                  return {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      result: nodeResult.output || nodeResult,
+                      lastExecuted: new Date().toISOString(),
+                      status: 'success',
+                    },
+                  };
+                } else if (nodeResult && !nodeResult.success) {
+                  return {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      status: 'error',
+                      error: nodeResult.error,
+                    },
+                  };
+                }
+                return node;
+              }));
+            }
+
+            // Animate edges briefly
+            setEdges(eds => eds.map(edge => ({
+              ...edge,
+              data: { ...edge.data, success: true, animated: true },
+            })));
+            setTimeout(() => {
+              setEdges(eds => eds.map(edge => ({
+                ...edge,
+                data: { ...edge.data, success: false, animated: false },
+              })));
+            }, 3000);
+
+            alert('Workflow hoàn thành thành công!');
+            break;
+          } else if (status === 'failed') {
+            const errorMsg = pollData.error || 'Unknown error';
+            console.error('❌ Workflow failed:', errorMsg);
+
+            // Mark all nodes as idle
+            setNodes(nds => nds.map(node => ({
+              ...node,
+              data: { ...node.data, status: 'idle' },
+            })));
+
+            alert(`Workflow thất bại: ${errorMsg}`);
+            break;
+          }
+        } catch (pollErr) {
+          console.warn('⚠️ Poll error (retrying):', pollErr.message);
+          // Continue polling on transient errors
+        }
+      }
+
+      if (pollCount >= maxPolls && status === 'running') {
+        alert('Workflow đang chạy quá lâu. Kiểm tra lại trong Execution History.');
+      }
 
     } catch (error) {
-      console.error('Workflow execution failed:', error);
+      console.error('❌ Workflow execution failed:', error);
       alert(`Lỗi khi chạy workflow: ${error.message}`);
-      
-      // Reset all node statuses to idle
-      setNodes(nds => nds.map(node => ({ 
-        ...node, 
-        data: { ...node.data, status: 'idle' } 
+
+      // Reset all node statuses
+      setNodes(nds => nds.map(node => ({
+        ...node,
+        data: { ...node.data, status: 'idle' },
       })));
     } finally {
       setIsExecuting(false);
@@ -1175,6 +1367,50 @@ export default function App() {
           hasOutput: true,
           nodeType: 'email-template',
         };
+      } else if (type === 'if-else') {
+        nodeType = 'ifElseNode';
+        nodeData = {
+          label: 'IF / ELSE',
+          color: '#f59e0b',
+          condition: '',
+          nodeType: 'if-else',
+        };
+      } else if (type === 'switch') {
+        nodeType = 'switchNode';
+        nodeData = {
+          label: 'SWITCH',
+          color: '#8b5cf6',
+          switchKey: '',
+          cases: ['case1', 'case2'],
+          nodeType: 'switch',
+        };
+      } else if (type === 'loop') {
+        nodeType = 'loopNode';
+        nodeData = {
+          label: 'LOOP',
+          color: '#06b6d4',
+          iteratorKey: '',
+          itemVar: 'item',
+          nodeType: 'loop',
+        };
+      } else if (type === 'delay') {
+        nodeType = 'delayNode';
+        nodeData = {
+          label: 'DELAY',
+          color: '#f97316',
+          delayAmount: 1000,
+          unit: 'ms',
+          nodeType: 'delay',
+        };
+      } else if (type === 'merge') {
+        nodeType = 'mergeNode';
+        nodeData = {
+          label: 'MERGE',
+          color: '#ec4899',
+          inputCount: 2,
+          mergeStrategy: 'array',
+          nodeType: 'merge',
+        };
       } else {
         // Fallback for nodes not in registry
         nodeData = {
@@ -1230,6 +1466,7 @@ export default function App() {
             animate="animate"
             exit="exit"
             style={{ position: 'absolute', inset: 0, zIndex: 100, overflowY: 'auto', overflowX: 'hidden' }}
+            id="landing-scroller"
           >
             <LandingPage onEnter={navigateToSignIn} onNavigateToDocs={navigateToDocumentation} />
           </motion.div>

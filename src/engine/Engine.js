@@ -174,18 +174,32 @@ class ExecutionEngine {
     console.log('🚀 Starting workflow execution...');
     console.log('📋 Execution order:', executionOrder.map(n => `${n.id}: ${n.data.label}`));
 
-    // Build edge map for quick lookup
+    // Build edge map for quick lookup (target → [{source, sourceHandle}])
     const edgeMap = new Map();
     edges.forEach(edge => {
       if (!edgeMap.has(edge.target)) {
         edgeMap.set(edge.target, []);
       }
-      edgeMap.get(edge.target).push(edge.source);
+      edgeMap.get(edge.target).push({
+        source: edge.source,
+        sourceHandle: edge.sourceHandle || null,
+      });
     });
+
+    // Set of skipped nodes (due to conditional routing)
+    const skippedNodes = new Set();
 
     try {
       for (let i = 0; i < executionOrder.length; i++) {
         const node = executionOrder[i];
+
+        // Skip nodes that were excluded by conditional routing
+        if (skippedNodes.has(node.id)) {
+          console.log(`\n⏭️ Skipping node ${node.data.label} (${node.id}) — branch not taken`);
+          results.push({ nodeId: node.id, success: true, data: null, skipped: true, timestamp: Date.now() });
+          nodeOutputs.set(node.id, { success: true, data: null, skipped: true });
+          continue;
+        }
         
         console.log(`\n📍 Executing node ${i + 1}/${executionOrder.length}: ${node.data.label} (${node.id})`);
         
@@ -196,20 +210,64 @@ class ExecutionEngine {
           status: 'executing'
         });
 
-        // Collect input data from connected nodes
-        const inputSources = edgeMap.get(node.id) || [];
+        // Collect input data from connected nodes (with conditional routing check)
+        const inputEdges = edgeMap.get(node.id) || [];
         const inputData = {};
+        let shouldSkip = false;
         
-        console.log(`   📥 Input sources: ${inputSources.length > 0 ? inputSources.join(', ') : 'none'}`);
+        console.log(`   📥 Input sources: ${inputEdges.length > 0 ? inputEdges.map(e => e.source).join(', ') : 'none'}`);
         
-        inputSources.forEach(sourceId => {
+        for (const { source: sourceId, sourceHandle } of inputEdges) {
           const sourceOutput = nodeOutputs.get(sourceId);
-          if (sourceOutput && sourceOutput.success) {
-            console.log(`   ✅ Merging data from ${sourceId}:`, sourceOutput.data);
-            // Merge data from source nodes
-            Object.assign(inputData, sourceOutput.data);
+          if (!sourceOutput || !sourceOutput.success) continue;
+          if (sourceOutput.skipped) { shouldSkip = true; break; }
+
+          const sourceData = sourceOutput.data;
+
+          // Check if source is a conditional node (IF/ELSE or SWITCH)
+          if (sourceData && sourceData.type === 'if-else' && sourceHandle) {
+            // Only pass data if this edge's sourceHandle matches the branch taken
+            if (sourceHandle !== sourceData.branch) {
+              console.log(`   ⏭️ Skipping input from ${sourceId} — branch "${sourceData.branch}" ≠ handle "${sourceHandle}"`);
+              shouldSkip = true;
+              break;
+            }
+            // Pass the original data through (not the if-else metadata)
+            Object.assign(inputData, sourceData.data || {});
+          } else if (sourceData && sourceData.type === 'switch' && sourceHandle) {
+            // Only pass data if this edge's sourceHandle matches the matched case
+            if (sourceHandle !== sourceData.matchedCase) {
+              console.log(`   ⏭️ Skipping input from ${sourceId} — case "${sourceData.matchedCase}" ≠ handle "${sourceHandle}"`);
+              shouldSkip = true;
+              break;
+            }
+            Object.assign(inputData, sourceData.data || {});
+          } else {
+            // Normal node — merge all data
+            console.log(`   ✅ Merging data from ${sourceId}:`, sourceData);
+            Object.assign(inputData, sourceData || {});
           }
-        });
+        }
+
+        // If this node should be skipped due to conditional routing
+        if (shouldSkip) {
+          console.log(`   ⏭️ Node skipped — conditional branch not taken`);
+          skippedNodes.add(node.id);
+          // Also skip all downstream nodes from this one
+          const markDownstream = (nid) => {
+            const downEdges = edges.filter(e => e.source === nid);
+            downEdges.forEach(e => {
+              if (!skippedNodes.has(e.target)) {
+                skippedNodes.add(e.target);
+                markDownstream(e.target);
+              }
+            });
+          };
+          markDownstream(node.id);
+          results.push({ nodeId: node.id, success: true, data: null, skipped: true, timestamp: Date.now() });
+          nodeOutputs.set(node.id, { success: true, data: null, skipped: true });
+          continue;
+        }
 
         console.log(`   📦 Input data for ${node.data.label}:`, inputData);
 
@@ -529,7 +587,516 @@ const defaultProcessors = {
   // Content Writer nodes
   'content-writer': async (nodeData, inputData) => {
     return defaultProcessors.marketing(nodeData, inputData);
-  }
+  },
+
+  // ─── Read Email Node ───────────────────────────────────────────────────────
+  'readEmailNode': async (nodeData, inputData) => {
+    console.log('📬 ReadEmail Node Processing:', nodeData.label);
+
+    const API = 'https://back-end-auto-office-f8xt.vercel.app';
+
+    // ── 1. Detect provider from connected EmailAccountNode credentials ──
+    const getCredentials = () => {
+      if (nodeData.getNodes && nodeData.getEdges) {
+        const allNodes = nodeData.getNodes();
+        const allEdges = nodeData.getEdges();
+        const incomingEdges = allEdges.filter(e => e.target === nodeData.id);
+
+        for (const edge of incomingEdges) {
+          const sourceNode = allNodes.find(n => n.id === edge.source);
+          if (!sourceNode) continue;
+          const nd = sourceNode.data;
+          const val = nd.value || {};
+
+          // OAuth / Gmail
+          if (val.mode === 'oauth' || nd.mode === 'oauth') {
+            const gmailToken = localStorage.getItem('gmail_access_token');
+            if (gmailToken) {
+              return {
+                provider: 'gmail',
+                credentials: {
+                  type: 'oauth2',
+                  accessToken: gmailToken,
+                  refreshToken: localStorage.getItem('gmail_refresh_token') || undefined,
+                  clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
+                  clientSecret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '',
+                },
+              };
+            }
+          }
+
+          // SMTP / IMAP (password-based)
+          const email    = (val.email    || nd.email    || '').trim();
+          const password = (val.password || nd.password || '').trim();
+          if (email && password) {
+            return {
+              provider: 'imap',
+              credentials: {
+                type: 'password',
+                username: email,
+                password,
+                host: val.host || nd.host || 'imap.gmail.com',
+                port: val.port || nd.port || 993,
+              },
+            };
+          }
+        }
+      }
+
+      // Fallback: read directly from nodeData (manual config)
+      const gmailToken = localStorage.getItem('gmail_access_token');
+      if (gmailToken) {
+        return {
+          provider: 'gmail',
+          credentials: {
+            type: 'oauth2',
+            accessToken: gmailToken,
+            refreshToken: localStorage.getItem('gmail_refresh_token') || undefined,
+            clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
+            clientSecret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '',
+          },
+        };
+      }
+
+      return null;
+    };
+
+    // ── 2. Build config with { provider, credentials } format ──
+    const credInfo = getCredentials();
+    if (!credInfo) {
+      throw new Error('ReadEmail: No email credentials found. Connect an Email Account node.');
+    }
+
+    const config = {
+      provider: credInfo.provider,
+      credentials: credInfo.credentials,
+    };
+
+    // ── 3. Options: folder, limit, unreadOnly ──
+    const options = {
+      folder:     nodeData.folder     || 'INBOX',
+      limit:      nodeData.limit      || 10,
+      unreadOnly: nodeData.unreadOnly ?? false,
+    };
+
+    const token = localStorage.getItem('office_weave_token') || localStorage.getItem('auth_token');
+
+    const requestBody = {
+      provider: credInfo.provider,
+      config,
+      options,
+    };
+
+    console.log('📤 ReadEmail request:', { provider: credInfo.provider, options });
+
+    const response = await fetch(`${API}/api/email/read`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    const result = await response.json();
+    console.log('📬 ReadEmail response:', response.status, result);
+
+    if (!response.ok) {
+      throw new Error(result.error || result.message || `ReadEmail failed: ${response.status}`);
+    }
+
+    const emails = result.data?.emails || result.emails || [];
+
+    return {
+      type: 'read-email',
+      emails,
+      count: emails.length,
+      folder: options.folder,
+      timestamp: Date.now(),
+    };
+  },
+
+  // ─── Send Email Node ───────────────────────────────────────────────────────
+  'sendEmailNode': async (nodeData, inputData) => {
+    console.log('📧 SendEmail Node Processing:', nodeData.label);
+
+    const API = 'https://back-end-auto-office-f8xt.vercel.app';
+
+    // ── 1. Detect provider + build credentials from connected EmailAccountNode ──
+    const getCredentials = () => {
+      if (nodeData.getNodes && nodeData.getEdges) {
+        const allNodes = nodeData.getNodes();
+        const allEdges = nodeData.getEdges();
+        const incomingEdges = allEdges.filter(e => e.target === nodeData.id);
+
+        for (const edge of incomingEdges) {
+          const sourceNode = allNodes.find(n => n.id === edge.source);
+          if (!sourceNode) continue;
+          const nd = sourceNode.data;
+          const val = nd.value || {};
+
+          // OAuth / Gmail
+          if (val.mode === 'oauth' || nd.mode === 'oauth') {
+            const gmailToken = localStorage.getItem('gmail_access_token');
+            if (gmailToken) {
+              return {
+                provider: 'gmail',
+                credentials: {
+                  type: 'oauth2',
+                  accessToken: gmailToken,
+                  refreshToken: localStorage.getItem('gmail_refresh_token') || undefined,
+                  clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
+                  clientSecret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '',
+                },
+              };
+            }
+          }
+
+          // SMTP (password-based)
+          const email    = (val.email    || nd.email    || '').trim();
+          const password = (val.password || nd.password || '').trim();
+          if (email && password) {
+            const host = val.host || nd.host || 'smtp.gmail.com';
+            const port = val.port || nd.port || 587;
+            return {
+              provider: 'smtp',
+              credentials: {
+                type: 'password',
+                username: email,
+                password,
+                host,
+                port,
+                secure: port === 465,
+              },
+            };
+          }
+        }
+      }
+
+      // Fallback: OAuth from localStorage
+      const gmailToken = localStorage.getItem('gmail_access_token');
+      if (gmailToken) {
+        return {
+          provider: 'gmail',
+          credentials: {
+            type: 'oauth2',
+            accessToken: gmailToken,
+            refreshToken: localStorage.getItem('gmail_refresh_token') || undefined,
+            clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
+            clientSecret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '',
+          },
+        };
+      }
+
+      return null;
+    };
+
+    // ── 2. Build config with { provider, credentials } format ──
+    const credInfo = getCredentials();
+    if (!credInfo) {
+      throw new Error('SendEmail: No email credentials found. Connect an Email Account node.');
+    }
+
+    const config = {
+      provider: credInfo.provider,
+      credentials: credInfo.credentials,
+    };
+
+    // ── 3. Build email.to with [{ address }] format ──
+    const rawTo = nodeData.to || inputData.to || '';
+    if (!rawTo) {
+      throw new Error('SendEmail: Recipient (to) is required.');
+    }
+
+    const toAddresses = String(rawTo)
+      .split(',')
+      .map(e => ({ address: e.trim() }))
+      .filter(e => e.address);
+
+    // ── 4. Build email.body with { body: { text, html } } format ──
+    const rawBody = nodeData.body || inputData.body || '';
+    const isHtml  = nodeData.isHtmlMode || false;
+
+    const emailBody = isHtml
+      ? {
+          html: rawBody,
+          text: rawBody.replace(/<[^>]*>/g, ''),
+        }
+      : {
+          text: rawBody,
+          html: `<p>${String(rawBody).replace(/\n/g, '<br>')}</p>`,
+        };
+
+    const emailPayload = {
+      to: toAddresses,
+      subject: nodeData.subject || inputData.subject || '(No Subject)',
+      body: emailBody,
+    };
+
+    // Optional CC / BCC
+    if (nodeData.cc) {
+      emailPayload.cc = String(nodeData.cc)
+        .split(',')
+        .map(e => ({ address: e.trim() }))
+        .filter(e => e.address);
+    }
+    if (nodeData.bcc) {
+      emailPayload.bcc = String(nodeData.bcc)
+        .split(',')
+        .map(e => ({ address: e.trim() }))
+        .filter(e => e.address);
+    }
+
+    const token = localStorage.getItem('office_weave_token') || localStorage.getItem('auth_token');
+
+    const requestBody = {
+      provider: credInfo.provider,
+      config,
+      email: emailPayload,
+    };
+
+    console.log('📤 SendEmail request:', {
+      provider: credInfo.provider,
+      to: emailPayload.to,
+      subject: emailPayload.subject,
+    });
+
+    const response = await fetch(`${API}/api/email/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    const result = await response.json();
+    console.log('📬 SendEmail response:', response.status, result);
+
+    if (!response.ok && !(result.success || result.data?.success)) {
+      throw new Error(result.error || result.message || `SendEmail failed: ${response.status}`);
+    }
+
+    return {
+      type: 'send-email',
+      success: true,
+      messageId: result.messageId || result.data?.messageId,
+      to: emailPayload.to.map(t => t.address).join(', '),
+      subject: emailPayload.subject,
+      timestamp: Date.now(),
+    };
+  },
+
+  // ─── Logic Nodes ───────────────────────────────────────────────────────────
+
+  // IF/ELSE Node — evaluates condition, routes to true/false
+  'ifElseNode': async (nodeData, inputData) => {
+    console.log('🔀 IfElse Node Processing:', nodeData.label);
+    console.log('   Condition:', nodeData.condition);
+    console.log('   Input data:', inputData);
+
+    const condition = nodeData.condition || '';
+    let result = false;
+
+    if (condition) {
+      try {
+        // Create a safe evaluation context with input data available
+        const evalFn = new Function('data', 'input', `
+          try { return !!(${condition}); }
+          catch(e) { return false; }
+        `);
+        result = evalFn(inputData, inputData);
+      } catch (err) {
+        console.warn('⚠️ IfElse condition eval error:', err.message);
+        result = false;
+      }
+    }
+
+    console.log(`   Result: ${result ? '✅ TRUE' : '❌ FALSE'}`);
+
+    return {
+      type: 'if-else',
+      condition,
+      result,
+      branch: result ? 'true' : 'false',
+      data: inputData,
+      timestamp: Date.now(),
+    };
+  },
+
+  'if-else': async (nodeData, inputData) => {
+    return defaultProcessors['ifElseNode'](nodeData, inputData);
+  },
+
+  // SWITCH Node — routes to matching case port
+  'switchNode': async (nodeData, inputData) => {
+    console.log('🔀 Switch Node Processing:', nodeData.label);
+    console.log('   Switch key:', nodeData.switchKey);
+    console.log('   Cases:', nodeData.cases);
+    console.log('   Input data:', inputData);
+
+    const switchKey = nodeData.switchKey || '';
+    let switchValue = '';
+
+    if (switchKey) {
+      try {
+        const evalFn = new Function('data', 'input', `
+          try { return ${switchKey}; }
+          catch(e) { return ''; }
+        `);
+        switchValue = String(evalFn(inputData, inputData) || '');
+      } catch (err) {
+        console.warn('⚠️ Switch key eval error:', err.message);
+      }
+    }
+
+    const cases = nodeData.cases || [];
+    const matchedCase = cases.find(c => c === switchValue) || 'default';
+
+    console.log(`   Switch value: "${switchValue}" → matched: "${matchedCase}"`);
+
+    return {
+      type: 'switch',
+      switchKey,
+      switchValue,
+      matchedCase,
+      cases,
+      data: inputData,
+      timestamp: Date.now(),
+    };
+  },
+
+  'switch': async (nodeData, inputData) => {
+    return defaultProcessors['switchNode'](nodeData, inputData);
+  },
+
+  // LOOP Node — iterates over array, collects results
+  'loopNode': async (nodeData, inputData) => {
+    console.log('🔁 Loop Node Processing:', nodeData.label);
+    console.log('   Iterator key:', nodeData.iteratorKey);
+    console.log('   Item var:', nodeData.itemVar);
+    console.log('   Input data:', inputData);
+
+    const iteratorKey = nodeData.iteratorKey || '';
+    let items = [];
+
+    if (iteratorKey) {
+      try {
+        const evalFn = new Function('data', 'input', `
+          try { return ${iteratorKey}; }
+          catch(e) { return []; }
+        `);
+        const result = evalFn(inputData, inputData);
+        items = Array.isArray(result) ? result : [];
+      } catch (err) {
+        console.warn('⚠️ Loop iterator eval error:', err.message);
+      }
+    } else if (Array.isArray(inputData.emails)) {
+      items = inputData.emails;
+    } else if (Array.isArray(inputData.items)) {
+      items = inputData.items;
+    } else if (Array.isArray(inputData.data)) {
+      items = inputData.data;
+    }
+
+    console.log(`   Found ${items.length} items to iterate`);
+
+    // For client-side, we just pass through the array
+    // Server-side engine handles actual iteration with sub-graph execution
+    return {
+      type: 'loop',
+      items,
+      count: items.length,
+      itemVar: nodeData.itemVar || 'item',
+      timestamp: Date.now(),
+    };
+  },
+
+  'loop': async (nodeData, inputData) => {
+    return defaultProcessors['loopNode'](nodeData, inputData);
+  },
+
+  // DELAY Node — waits then passes data through unchanged
+  'delayNode': async (nodeData, inputData) => {
+    console.log('⏱️ Delay Node Processing:', nodeData.label);
+
+    const amount = nodeData.delayAmount ?? 1000;
+    const unit = nodeData.unit || 'ms';
+
+    let delayMs = amount;
+    if (unit === 's') delayMs = amount * 1000;
+    else if (unit === 'min') delayMs = amount * 60000;
+
+    // Cap client-side delay at 30 seconds to avoid blocking
+    const actualDelay = Math.min(delayMs, 30000);
+
+    console.log(`   Waiting ${actualDelay}ms (configured: ${amount}${unit})...`);
+    await new Promise(resolve => setTimeout(resolve, actualDelay));
+    console.log('   ✅ Delay complete, passing data through');
+
+    return {
+      type: 'delay',
+      delayMs,
+      actualDelay,
+      ...inputData,
+      timestamp: Date.now(),
+    };
+  },
+
+  'delay': async (nodeData, inputData) => {
+    return defaultProcessors['delayNode'](nodeData, inputData);
+  },
+
+  // MERGE Node — combines multiple inputs into one output
+  'mergeNode': async (nodeData, inputData) => {
+    console.log('🔗 Merge Node Processing:', nodeData.label);
+    console.log('   Strategy:', nodeData.mergeStrategy);
+    console.log('   Input data:', inputData);
+
+    const strategy = nodeData.mergeStrategy || 'array';
+
+    // inputData already contains merged data from all connected sources
+    // (Engine.js merges via Object.assign in executeGraph)
+    let merged;
+
+    switch (strategy) {
+      case 'array':
+        // Wrap all input values into an array
+        merged = Object.values(inputData).filter(v => v !== undefined);
+        break;
+      case 'object':
+        // Keep as merged object (already done by engine)
+        merged = { ...inputData };
+        break;
+      case 'concat':
+        // Concatenate string/array values
+        const values = Object.values(inputData).filter(v => v !== undefined);
+        if (values.every(v => typeof v === 'string')) {
+          merged = values.join('\n');
+        } else if (values.every(v => Array.isArray(v))) {
+          merged = values.flat();
+        } else {
+          merged = values;
+        }
+        break;
+      default:
+        merged = inputData;
+    }
+
+    console.log('   ✅ Merged result:', merged);
+
+    return {
+      type: 'merge',
+      strategy,
+      merged,
+      data: merged,
+      timestamp: Date.now(),
+    };
+  },
+
+  'merge': async (nodeData, inputData) => {
+    return defaultProcessors['mergeNode'](nodeData, inputData);
+  },
 };
 
 // Create and configure the global engine instance

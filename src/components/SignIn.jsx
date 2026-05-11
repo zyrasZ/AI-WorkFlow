@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Mail } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { signInWithGoogle } from '../lib/supabase'
 
 export default function SignIn({ onSignIn, onNavigateToSignUp }) {
   const { login, loading, error } = useAuth()
@@ -40,15 +41,24 @@ export default function SignIn({ onSignIn, onNavigateToSignUp }) {
     }
   }
 
-  const handleAuth = (provider) => {
+  const handleAuth = async (provider) => {
     if (provider === 'email') {
       setShowEmailForm(true)
       return
     }
     
     if (provider === 'google') {
-      // Redirect to backend Google OAuth endpoint
-      window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/auth/google`
+      try {
+        setOauthLoading(true)
+        // Use Supabase OAuth directly — redirects back to window.location.origin
+        // App.jsx handles the token from URL hash automatically
+        await signInWithGoogle()
+        // signInWithGoogle() triggers a redirect, so code below won't run
+      } catch (err) {
+        console.error('Google OAuth error:', err)
+        setLocalError('Đăng nhập Google thất bại: ' + err.message)
+        setOauthLoading(false)
+      }
       return
     }
     

@@ -1,6 +1,6 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useRef } from 'react';
 import { Handle, Position } from 'reactflow';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Play, 
   CheckCircle, 
@@ -13,6 +13,7 @@ import {
   Video,
   Eye
 } from 'lucide-react';
+import engine from '../engine/Engine.js';
 
 // Pillar icons mapping
 const pillarIcons = {
@@ -45,6 +46,8 @@ const GhostNode = memo(({ data, selected, id }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [localFields, setLocalFields] = useState(data.fields || []);
   const [localResult, setLocalResult] = useState(data.result || null);
+  const [isNodeHovered, setIsNodeHovered] = useState(false);
+  const isProcessingRef = useRef(false); // Ref to avoid stale closure issues
 
   // Thêm props để lấy nodes và edges từ React Flow
   const { getNodes, getEdges } = data;
@@ -68,6 +71,13 @@ const GhostNode = memo(({ data, selected, id }) => {
     if (result) setLocalResult(result);
   }, [result]);
 
+  // Safety reset: if node gets new inputPrompt while stuck, unblock
+  useEffect(() => {
+    if (data.inputPrompt && isProcessingRef.current === false) {
+      setIsProcessing(false);
+    }
+  }, [data.inputPrompt]);
+
   // Luôn ưu tiên result mới nhất
   const displayResult = result || localResult;
 
@@ -82,12 +92,22 @@ const GhostNode = memo(({ data, selected, id }) => {
 
   // Execute the node's data processor
   const executeProcessor = async () => {
-    if (!processor || isProcessing) return;
+    // Get processor: from data directly, or look up in engine registry by nodeType
+    const currentProcessor = data.processor
+      || processor
+      || engine.nodeRegistry.get(data.nodeType)
+      || engine.nodeRegistry.get(data.pillar);
 
+    if (!currentProcessor) {
+      console.warn('⚠️ No processor found for node:', id, data.label, 'nodeType:', data.nodeType);
+      alert(`Không tìm thấy processor cho node "${data.label}". Thử xóa và thêm lại node.`);
+      return;
+    }
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     setIsProcessing(true);
-    data.fields = localFields;
 
-    // Clear the updated input flag
+    data.fields = localFields;
     data.hasUpdatedInput = false;
 
     // Tìm PromptNode được kết nối với node này
@@ -131,13 +151,12 @@ const GhostNode = memo(({ data, selected, id }) => {
     const inputs = finalPrompt ? { prompt: finalPrompt, value: finalPrompt } : {};
 
     try {
-      const result = await processor(data, inputs);
+      const result = await currentProcessor(data, inputs);
       console.log('✅ Node execution result:', result);
       setLocalResult(result);
       data.result = result;
       data.lastExecuted = new Date().toISOString();
       
-      // Gọi callback để truyền result sang OutputNode nếu có
       if (data.onNodeResult) {
         data.onNodeResult(id, result);
       }
@@ -145,6 +164,7 @@ const GhostNode = memo(({ data, selected, id }) => {
       console.error('❌ Node execution failed:', error);
       alert(`Lỗi: ${error.message}`);
     } finally {
+      isProcessingRef.current = false;
       setIsProcessing(false);
     }
   };
@@ -167,25 +187,67 @@ const GhostNode = memo(({ data, selected, id }) => {
           rgba(255,255,255,0.02) 100%
         )`
       }}
+      onMouseEnter={() => setIsNodeHovered(true)}
+      onMouseLeave={() => setIsNodeHovered(false)}
     >
       {/* Input Handle */}
       {hasInput && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          className="w-3 h-3 border-2 border-white/40 bg-black/60 backdrop-blur-sm"
-          style={{ left: -6 }}
-        />
+        <div
+          className="absolute"
+          style={{ left: -6, top: '50%', transform: 'translateY(-50%)' }}
+        >
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 border-2 border-white/40 bg-black/60 backdrop-blur-sm !relative !transform-none !inset-auto"
+          />
+          <AnimatePresence>
+            {isNodeHovered && (
+              <motion.div
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -6 }}
+                transition={{ duration: 0.15 }}
+                style={{ right: 'calc(100% + 8px)', top: '50%', transform: 'translateY(-50%)', position: 'absolute' }}
+                className="whitespace-nowrap pointer-events-none"
+              >
+                <span className="text-xs font-semibold text-white/70" style={{ textShadow: '0 0 10px rgba(255,255,255,0.9)' }}>
+                  Input
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       )}
 
       {/* Output Handle */}
       {hasOutput && (
-        <Handle
-          type="source"
-          position={Position.Right}
-          className="w-3 h-3 border-2 border-white/40 bg-black/60 backdrop-blur-sm"
-          style={{ right: -6 }}
-        />
+        <div
+          className="absolute"
+          style={{ right: -6, top: '50%', transform: 'translateY(-50%)' }}
+        >
+          <Handle
+            type="source"
+            position={Position.Right}
+            className="w-3 h-3 border-2 border-white/40 bg-black/60 backdrop-blur-sm !relative !transform-none !inset-auto"
+          />
+          <AnimatePresence>
+            {isNodeHovered && (
+              <motion.div
+                initial={{ opacity: 0, x: 6 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 6 }}
+                transition={{ duration: 0.15 }}
+                style={{ left: 'calc(100% + 8px)', top: '50%', transform: 'translateY(-50%)', position: 'absolute' }}
+                className="whitespace-nowrap pointer-events-none"
+              >
+                <span className="text-xs font-semibold text-white/70" style={{ textShadow: '0 0 10px rgba(255,255,255,0.9)' }}>
+                  Output
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       )}
 
       {/* Preview Area */}
@@ -270,7 +332,7 @@ const GhostNode = memo(({ data, selected, id }) => {
           className={`
             w-full flex items-center justify-center space-x-0.5 px-2 py-1 text-[8px] font-medium 
             ${hasUpdatedInput ? 'bg-yellow-500/20 hover:bg-yellow-500/30 border-yellow-400/40 text-yellow-300' : 'bg-white/10 hover:bg-white/20 border-white/10 text-white'}
-            disabled:bg-white/5 rounded transition-colors border
+            disabled:bg-white/5 disabled:opacity-50 rounded transition-colors border
           `}
         >
           {isProcessing ? (
