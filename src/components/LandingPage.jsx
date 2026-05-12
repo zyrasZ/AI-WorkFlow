@@ -230,7 +230,6 @@ function Navbar({ onEnter, onNavigateToDocs }) {
             <button onClick={onNavigateToDocs} className="text-white/50 hover:text-white text-sm font-medium transition-colors duration-200">Docs</button>
           </div>
           <div ref={actionsRef} className="flex items-center gap-3">
-            <button className="text-white/50 hover:text-white text-sm font-medium transition-colors duration-200 hidden sm:block">Login</button>
             <MagneticBtn onClick={onEnter} className={`${orangeGrad} text-xs px-4 py-2 rounded-xl`}>Get Started For Free</MagneticBtn>
           </div>
         </nav>
@@ -690,73 +689,193 @@ function NodeLibrary() {
   )
 }
 
-/* ─── DashboardMockup helpers ─── */
-function MockConnector({ x1, y1, x2, y2, color = 'rgba(255,255,255,0.15)' }) {
-  const mx = (x1 + x2) / 2
-  return (
-    <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ overflow: 'visible' }}>
-      <path d={`M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`}
-        fill="none" stroke={color} strokeWidth="1.5" strokeDasharray="5 4" strokeLinecap="round" />
-    </svg>
-  )
-}
+/* ─── LiveCanvasMockup — animated nodes with flowing connections ─── */
+function LiveCanvasMockup() {
+  const svgRef = useRef(null)
 
-function MockNode({ label, status = 'completed', color = '#8b5cf6' }) {
-  const statusColors = { running: '#f59e0b', completed: '#10b981', error: '#f43f5e' }
-  const dot = statusColors[status] || '#10b981'
-  return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-white/80 select-none"
-      style={{ background: `${color}18`, border: `1px solid ${color}35`, backdropFilter: 'blur(8px)', whiteSpace: 'nowrap' }}>
-      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dot, boxShadow: `0 0 6px ${dot}` }} />
-      {label}
-    </div>
-  )
-}
+  // Node definitions: id, label, tag, x, y, color, dot
+  const nodes = [
+    { id: 'trigger',  label: 'Email Trigger',    tag: 'TRIGGER', x: 60,  y: 80,  color: '#3b82f6', dot: '#60a5fa' },
+    { id: 'read',     label: 'Read Email',        tag: 'EMAIL',   x: 60,  y: 190, color: '#8b5cf6', dot: '#a78bfa' },
+    { id: 'prompt',   label: 'Prompt Node',       tag: 'INPUT',   x: 60,  y: 300, color: '#eab308', dot: '#fbbf24' },
+    { id: 'ai',       label: 'Llama 3.3',         tag: 'AI',      x: 340, y: 135, color: '#10b981', dot: '#34d399' },
+    { id: 'filter',   label: 'Filter Email',      tag: 'LOGIC',   x: 340, y: 250, color: '#f97316', dot: '#fb923c' },
+    { id: 'template', label: 'Email Template',    tag: 'TMPL',    x: 620, y: 80,  color: '#10b981', dot: '#6ee7b7' },
+    { id: 'send',     label: 'Send Email',        tag: 'ACTION',  x: 620, y: 190, color: '#f59e0b', dot: '#fcd34d' },
+    { id: 'output',   label: 'Output',            tag: 'OUT',     x: 620, y: 300, color: '#8b5cf6', dot: '#c084fc' },
+  ]
 
-function CircleProgress() {
-  const circleRef = useRef(null)
-  const pct = 55
-  const r = 36, circ = 2 * Math.PI * r
-  const offset = circ * (1 - pct / 100)
+  // Edge definitions: from node id → to node id, with color
+  const edges = [
+    { from: 'trigger', to: 'ai',       color: '#60a5fa' },
+    { from: 'read',    to: 'ai',       color: '#a78bfa' },
+    { from: 'prompt',  to: 'filter',   color: '#fbbf24' },
+    { from: 'ai',      to: 'template', color: '#34d399' },
+    { from: 'ai',      to: 'send',     color: '#34d399' },
+    { from: 'filter',  to: 'send',     color: '#fb923c' },
+    { from: 'filter',  to: 'output',   color: '#fb923c' },
+    { from: 'template','to': 'send',   color: '#6ee7b7' },
+  ]
+
+  const NW = 155, NH = 44, NR = 10
+  const SVG_W = 860, SVG_H = 400
+
+  // Get node center-right port (output)
+  const portR = (n) => ({ x: n.x + NW, y: n.y + NH / 2 })
+  // Get node center-left port (input)
+  const portL = (n) => ({ x: n.x, y: n.y + NH / 2 })
+
+  const getNodeById = (id) => nodes.find(n => n.id === id)
+
+  // Build bezier path between two nodes
+  const edgePath = (from, to) => {
+    const s = portR(from), e = portL(to)
+    const cx = (s.x + e.x) / 2
+    return `M ${s.x} ${s.y} C ${cx} ${s.y}, ${cx} ${e.y}, ${e.x} ${e.y}`
+  }
 
   useEffect(() => {
-    const el = circleRef.current
-    if (!el) return
-    const obs = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        gsap.fromTo(el, { strokeDashoffset: circ }, { strokeDashoffset: offset, duration: 1.4, ease: 'power2.out' })
-        obs.disconnect()
-      }
-    }, { threshold: 0.5 })
-    obs.observe(el.closest('svg') || el)
-    return () => obs.disconnect()
-  }, [circ, offset])
+    const svg = svgRef.current
+    if (!svg) return
+    const tweens = []
+
+    // Animate each particle along its edge path
+    const particles = svg.querySelectorAll('.flow-particle')
+    particles.forEach((p, i) => {
+      const delay = (i * 0.55) % 3.5
+      const dur = 1.8 + (i % 3) * 0.4
+      tweens.push(
+        gsap.fromTo(p,
+          { opacity: 0 },
+          {
+            opacity: 1,
+            motionPath: { path: p.getAttribute('data-path'), align: p.getAttribute('data-path'), autoRotate: false },
+            duration: dur,
+            delay,
+            repeat: -1,
+            ease: 'none',
+            onRepeat: () => gsap.set(p, { opacity: 0 }),
+            onStart: () => gsap.to(p, { opacity: 1, duration: 0.15 }),
+          }
+        )
+      )
+    })
+
+    // Pulse dots on nodes
+    const dots = svg.querySelectorAll('.node-dot')
+    dots.forEach((d, i) => {
+      tweens.push(gsap.to(d, {
+        opacity: 0.3, duration: 0.9 + (i % 4) * 0.3,
+        repeat: -1, yoyo: true, ease: 'sine.inOut', delay: i * 0.2,
+      }))
+    })
+
+    return () => tweens.forEach(t => t.kill())
+  }, [])
 
   return (
-    <div className="flex flex-col items-center gap-1">
-      <svg width="90" height="90" viewBox="0 0 90 90">
-        <circle cx="45" cy="45" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
-        <circle ref={circleRef} cx="45" cy="45" r={r} fill="none" stroke="#f59e0b" strokeWidth="6"
-          strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={circ}
-          transform="rotate(-90 45 45)" style={{ filter: 'drop-shadow(0 0 6px #f59e0b)' }} />
-        <text x="45" y="50" textAnchor="middle" fill="white" fontSize="14" fontWeight="800" fontFamily="Inter,sans-serif">{pct}%</text>
+    <div className="w-full overflow-hidden rounded-2xl" style={{
+      background: 'radial-gradient(ellipse at 40% 50%, rgba(139,92,246,0.06) 0%, transparent 60%)',
+      backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.035) 1px, transparent 1px)',
+      backgroundSize: '28px 28px',
+    }}>
+      <style>{`
+        @keyframes dash-flow { to { stroke-dashoffset: -20; } }
+        .edge-track { animation: dash-flow 1.8s linear infinite; }
+      `}</style>
+      <svg ref={svgRef} viewBox={`0 0 ${SVG_W} ${SVG_H}`} width="100%"
+        style={{ display: 'block', overflow: 'visible' }}>
+        <defs>
+          {edges.map((e, i) => {
+            const fn = getNodeById(e.from), tn = getNodeById(e.to)
+            if (!fn || !tn) return null
+            return (
+              <path key={`def-${i}`} id={`ep-${i}`} d={edgePath(fn, tn)} fill="none" />
+            )
+          })}
+          {nodes.map(n => (
+            <linearGradient key={`ng-${n.id}`} id={`ng-${n.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={n.color} stopOpacity="0.18" />
+              <stop offset="100%" stopColor={n.color} stopOpacity="0.06" />
+            </linearGradient>
+          ))}
+          <filter id="lc-glow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="3" result="b" />
+            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+
+        {/* Edge tracks (dashed background) */}
+        {edges.map((e, i) => {
+          const fn = getNodeById(e.from), tn = getNodeById(e.to)
+          if (!fn || !tn) return null
+          return (
+            <path key={`track-${i}`} d={edgePath(fn, tn)} fill="none"
+              stroke={e.color} strokeWidth="1.5" strokeOpacity="0.12"
+              strokeDasharray="6 5" className="edge-track"
+              style={{ animationDelay: `${i * 0.3}s` }} />
+          )
+        })}
+
+        {/* Glowing edge lines */}
+        {edges.map((e, i) => {
+          const fn = getNodeById(e.from), tn = getNodeById(e.to)
+          if (!fn || !tn) return null
+          return (
+            <path key={`glow-${i}`} d={edgePath(fn, tn)} fill="none"
+              stroke={e.color} strokeWidth="1" strokeOpacity="0.08" />
+          )
+        })}
+
+        {/* Flow particles along edges */}
+        {edges.map((e, i) => {
+          const fn = getNodeById(e.from), tn = getNodeById(e.to)
+          if (!fn || !tn) return null
+          const path = edgePath(fn, tn)
+          return (
+            <circle key={`particle-${i}`} r="4" fill={e.color}
+              className="flow-particle" data-path={path}
+              filter="url(#lc-glow)" opacity="0">
+              <animateMotion dur={`${1.8 + (i % 3) * 0.4}s`} repeatCount="indefinite"
+                begin={`${(i * 0.55) % 3.5}s`}>
+                <mpath href={`#ep-${i}`} />
+              </animateMotion>
+            </circle>
+          )
+        })}
+
+        {/* Nodes */}
+        {nodes.map((n) => (
+          <g key={n.id}>
+            {/* Shadow */}
+            <rect x={n.x + 3} y={n.y + 4} width={NW} height={NH} rx={NR}
+              fill={n.color} opacity="0.08" />
+            {/* Body */}
+            <rect x={n.x} y={n.y} width={NW} height={NH} rx={NR}
+              fill={`url(#ng-${n.id})`} stroke={n.color} strokeWidth="0.8" strokeOpacity="0.4" />
+            {/* Left port dot */}
+            <circle className="node-dot" cx={n.x} cy={n.y + NH / 2} r="5"
+              fill={n.dot} filter="url(#lc-glow)" />
+            <circle cx={n.x} cy={n.y + NH / 2} r="9"
+              fill="none" stroke={n.dot} strokeWidth="1" strokeOpacity="0.2" />
+            {/* Right port dot */}
+            <circle className="node-dot" cx={n.x + NW} cy={n.y + NH / 2} r="5"
+              fill={n.dot} filter="url(#lc-glow)" />
+            <circle cx={n.x + NW} cy={n.y + NH / 2} r="9"
+              fill="none" stroke={n.dot} strokeWidth="1" strokeOpacity="0.2" />
+            {/* Label */}
+            <text x={n.x + 18} y={n.y + NH / 2 + 5}
+              fill="rgba(255,255,255,0.88)" fontSize="12" fontWeight="600"
+              fontFamily="Inter, system-ui, sans-serif">{n.label}</text>
+            {/* Tag badge */}
+            <rect x={n.x + NW - 44} y={n.y + 9} width={38} height={14} rx={7}
+              fill={n.color} opacity="0.22" />
+            <text x={n.x + NW - 25} y={n.y + 19.5} textAnchor="middle"
+              fill={n.dot} fontSize="7" fontWeight="700" fontFamily="monospace"
+              style={{ letterSpacing: '0.06em' }}>{n.tag}</text>
+          </g>
+        ))}
       </svg>
-      <span className="text-white/40 text-xs">Success Rate</span>
-    </div>
-  )
-}
-
-function MiniBarChart() {
-  const bars = [42, 68, 55, 80, 63, 91, 74]
-  const maxH = 40
-  return (
-    <div className="flex items-end gap-1.5" style={{ height: maxH + 20 }}>
-      {bars.map((v, i) => (
-        <div key={i} className="flex flex-col items-center gap-1">
-          <div className="rounded-sm w-5 transition-all duration-300"
-            style={{ height: (v / 100) * maxH, background: i === 5 ? '#f59e0b' : 'rgba(245,158,11,0.3)', boxShadow: i === 5 ? '0 0 8px #f59e0b80' : 'none' }} />
-        </div>
-      ))}
     </div>
   )
 }
@@ -777,85 +896,34 @@ function DashboardMockup() {
 
   useScrollReveal(mockRef, animateMock)
 
-  const stats = [
-    { label: 'Total Runs', value: '247', color: '#f59e0b' },
-    { label: 'Success Rate', value: '98.2%', color: '#10b981' },
-    { label: 'Avg Time', value: '1.4s', color: '#0ea5e9' },
-    { label: 'Active', value: '12', color: '#8b5cf6' },
-  ]
-
   return (
-    <section ref={sectionRef} className="relative py-28 px-5 overflow-hidden"
-      >
+    <section ref={sectionRef} className="relative py-28 px-5 overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[500px] rounded-full bg-purple-900/8 blur-[120px]" />
       </div>
       <div className="relative z-10 max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <span className="text-xs font-bold tracking-[0.3em] text-purple-400/70 uppercase mb-4 block">Dashboard</span>
-          <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Monitor everything, live</h2>
-          <p className="text-white/40 text-lg max-w-xl mx-auto">A real-time command center for all your running workflows.</p>
+          <span className="text-xs font-bold tracking-[0.3em] text-purple-400/70 uppercase mb-4 block">Visual Canvas</span>
+          <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Nodes that talk to each other</h2>
+          <p className="text-white/40 text-lg max-w-xl mx-auto">Drag, connect, and watch data flow between nodes in real time — no code needed.</p>
         </div>
-        <div ref={mockRef} className={`${glass} rounded-3xl overflow-hidden`} >
+        <div ref={mockRef} className={`${glass} rounded-3xl overflow-hidden`}>
           {/* Titlebar */}
           <div className="flex items-center gap-2 px-5 py-3 border-b border-white/5">
             <div className="w-3 h-3 rounded-full bg-red-500/60" />
             <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
             <div className="w-3 h-3 rounded-full bg-green-500/60" />
             <span className="ml-3 text-white/30 text-xs font-mono">nomads — workflow canvas</span>
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-[10px] text-green-400/70 font-mono flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" style={{ boxShadow: '0 0 4px #4ade80' }} />
+                Running
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col lg:flex-row">
-            {/* Canvas area */}
-            <div className="flex-1 relative p-8 min-h-[280px]" style={{ background: 'radial-gradient(circle at 30% 50%, rgba(139,92,246,0.05) 0%, transparent 60%)' }}>
-              <div className="absolute inset-0 pointer-events-none"
-                style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
-              {/* Nodes positioned absolutely */}
-              <div className="relative" style={{ height: 220 }}>
-                <div className="absolute" style={{ left: 0, top: 20 }}>
-                  <MockNode label="Read Email" status="completed" color="#3b82f6" />
-                </div>
-                <div className="absolute" style={{ left: 0, top: 90 }}>
-                  <MockNode label="AI Classify" status="running" color="#8b5cf6" />
-                </div>
-                <div className="absolute" style={{ left: 0, top: 160 }}>
-                  <MockNode label="Filter Logic" status="completed" color="#f59e0b" />
-                </div>
-                <div className="absolute" style={{ left: '42%', top: 55 }}>
-                  <MockNode label="Prompt Node" status="running" color="#8b5cf6" />
-                </div>
-                <div className="absolute" style={{ right: 0, top: 20 }}>
-                  <MockNode label="Send Email" status="completed" color="#f97316" />
-                </div>
-                <div className="absolute" style={{ right: 0, top: 100 }}>
-                  <MockNode label="Output" status="completed" color="#10b981" />
-                </div>
-                {/* SVG connectors overlay */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ overflow: 'visible' }}>
-                  <line x1="130" y1="30" x2="200" y2="75" stroke="rgba(139,92,246,0.3)" strokeWidth="1.5" strokeDasharray="5 4" />
-                  <line x1="130" y1="100" x2="200" y2="75" stroke="rgba(139,92,246,0.3)" strokeWidth="1.5" strokeDasharray="5 4" />
-                  <line x1="130" y1="170" x2="200" y2="75" stroke="rgba(245,158,11,0.3)" strokeWidth="1.5" strokeDasharray="5 4" />
-                </svg>
-              </div>
-            </div>
-            {/* Monitoring panel */}
-            <div className="w-full lg:w-64 border-t lg:border-t-0 lg:border-l border-white/5 p-6 flex flex-col gap-5">
-              <div className="text-white/50 text-xs font-bold tracking-widest uppercase">Monitoring</div>
-              <div className="grid grid-cols-2 gap-3">
-                {stats.map((s) => (
-                  <div key={s.label} className="rounded-xl p-3" style={{ background: `${s.color}10`, border: `1px solid ${s.color}20` }}>
-                    <div className="text-xl font-black" style={{ color: s.color }}>{s.value}</div>
-                    <div className="text-white/35 text-xs mt-0.5">{s.label}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center justify-between">
-                <CircleProgress />
-                <div className="flex flex-col items-center gap-1">
-                  <MiniBarChart />
-                  <span className="text-white/40 text-xs">Weekly Runs</span>
-                </div>
-              </div>
-            </div>
+          {/* Canvas */}
+          <div className="p-6">
+            <LiveCanvasMockup />
           </div>
         </div>
       </div>

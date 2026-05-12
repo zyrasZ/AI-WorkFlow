@@ -1,6 +1,7 @@
 import { useState, memo } from 'react';
 import { Handle, Position } from 'reactflow';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../lib/supabase';
 import {
   Mail,
   MailOpen,
@@ -136,7 +137,29 @@ const ReadEmailNode = memo(({ data, selected, id }) => {
     setError('');
 
     try {
-      const token    = localStorage.getItem('office_weave_token') || localStorage.getItem('auth_token');
+      // Always get fresh token from Supabase session (auto-refreshes if expired)
+      let token = localStorage.getItem('office_weave_token') || localStorage.getItem('auth_token');
+      
+      // Refresh token via existing Supabase client
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          token = session.access_token;
+          localStorage.setItem('office_weave_token', token);
+          if (session.provider_token) {
+            localStorage.setItem('gmail_access_token', session.provider_token);
+          }
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not refresh token:', e.message);
+      }
+
+      if (!token) {
+        setError('Not authenticated. Please log out and log in again.');
+        setIsFetching(false);
+        return;
+      }
+
       const dateFrom = computeDateFrom();
 
       const options = {
@@ -145,18 +168,27 @@ const ReadEmailNode = memo(({ data, selected, id }) => {
         unreadOnly,
         ...(filterFrom ? { sender:  filterFrom } : {}),
         ...(filterSubj ? { subject: filterSubj } : {}),
-        ...(dateFrom   ? { dateRange: { start: dateFrom } } : {}),
+        ...(dateFrom   ? { dateRange: { start: new Date(dateFrom).toISOString() } } : {}),
       };
 
       // Build Gmail config — only include clientId/clientSecret when they are
       // actually configured; the backend can work with just the accessToken.
       const clientId     = import.meta.env.VITE_GOOGLE_CLIENT_ID     || '';
       const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '';
+      
+      // Get fresh gmail token from localStorage (may have been refreshed above)
+      const freshGmailToken = localStorage.getItem('gmail_access_token');
+      if (creds.mode === 'oauth' && !freshGmailToken) {
+        setError('Gmail token not available. Please log out → log in with Google again.');
+        setIsFetching(false);
+        return;
+      }
+
       const gmailConfig  = {
         provider: 'gmail',
         credentials: {
           type:         'oauth2',
-          accessToken:  creds.gmailAccessToken,
+          accessToken:  freshGmailToken || creds.gmailAccessToken,
           ...(creds.gmailRefreshToken ? { refreshToken: creds.gmailRefreshToken } : {}),
         },
         ...(clientId     ? { clientId }     : {}),
@@ -205,10 +237,19 @@ const ReadEmailNode = memo(({ data, selected, id }) => {
         data.count  = payload.count || fetched.length;
         if (data.onNodeResult) data.onNodeResult(id, fetched);
       } else {
-        const isAuth = response.status === 401 || result.code === 'AUTH_ERROR';
-        setError(isAuth
-          ? 'Session expired — please log out and log in again'
-          : result.error || result.message || `Error ${response.status}`);
+        const isAuth = response.status === 401 || response.status === 403 || result.code === 'AUTH_ERROR';
+        if (isAuth) {
+          setError('Session expired — please log out and log in again to refresh your token.');
+        } else if (response.status === 500) {
+          const detail = result.error || result.message || '';
+          if (detail.includes('token') || detail.includes('auth') || detail.includes('credential')) {
+            setError('Gmail token expired. Please log out → log in again with Google.');
+          } else {
+            setError(`Server error: ${detail || 'Unknown error. Check backend logs.'}`);
+          }
+        } else {
+          setError(result.error || result.message || `Error ${response.status}`);
+        }
       }
     } catch (err) {
       setError('Network error: ' + err.message);
