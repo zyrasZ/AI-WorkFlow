@@ -4,6 +4,7 @@
  */
 
 import engine, { defaultProcessors } from '../engine/Engine.js';
+import { API_BASE_URL } from '../lib/config.js';
 
 class NodeRegistry {
   constructor() {
@@ -605,7 +606,7 @@ engine.registerNodeProcessor('readEmailNode', async (data, inputs) => {
   if (!creds?.email || !creds?.password) {
     return { type: 'email-list', emails: [], count: 0, error: 'No credentials' };
   }
-  const response = await fetch('https://back-end-auto-office-f8xt.vercel.app/api/email/read', {
+  const response = await fetch(`${API_BASE_URL}/api/email/read`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -635,7 +636,7 @@ engine.registerNodeProcessor('filterEmailNode', async (data, inputs) => {
   const emails = inputs?.emails || [];
   if (!emails.length) return { type: 'filter-result', matched: [], unmatched: [], matchedCount: 0, unmatchedCount: 0 };
   const token = localStorage.getItem('office_weave_token') || localStorage.getItem('auth_token');
-  const response = await fetch('https://back-end-auto-office-f8xt.vercel.app/api/email/filter', {
+  const response = await fetch(`${API_BASE_URL}/api/email/filter`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -685,7 +686,7 @@ engine.registerNodeProcessor('sendEmailNode', async (data, inputs) => {
   if (!to || !subject) {
     return { type: 'email-sent', success: false, error: 'Missing to/subject' };
   }
-  const response = await fetch('https://back-end-auto-office-f8xt.vercel.app/api/email/send', {
+  const response = await fetch(`${API_BASE_URL}/api/email/send`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

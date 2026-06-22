@@ -15,6 +15,7 @@ import {
   Type,
   RefreshCw
 } from 'lucide-react';
+import { API_BASE_URL } from '../lib/config.js';
 
 /**
  * EmailTemplateNode - Build & render email templates with variables
@@ -84,7 +85,7 @@ const EmailTemplateNode = memo(({ data, selected, id }) => {
       const token = localStorage.getItem('office_weave_token') || localStorage.getItem('auth_token');
       const varData = Object.fromEntries(variables.map(v => [v.key, v.value]));
 
-      const response = await fetch('https://back-end-auto-office-f8xt.vercel.app/api/email/template', {
+      const response = await fetch(`${API_BASE_URL}/api/email/template`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -180,8 +181,8 @@ const EmailTemplateNode = memo(({ data, selected, id }) => {
 
       const method  = savedId ? 'PATCH' : 'POST';
       const url     = savedId
-        ? `https://back-end-auto-office-f8xt.vercel.app/api/email/templates/${savedId}`
-        : 'https://back-end-auto-office-f8xt.vercel.app/api/email/templates';
+        ? `${API_BASE_URL}/api/email/templates/${savedId}`
+        : `${API_BASE_URL}/api/email/templates`;
 
       const response = await fetch(url, {
         method,

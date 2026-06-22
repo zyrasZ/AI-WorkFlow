@@ -6,8 +6,9 @@ import {
   Loader, Wifi, WifiOff, Trash2, Zap, Key, RefreshCw, ShieldCheck, PlusCircle
 } from 'lucide-react';
 import { signInWithGoogle, signInWithGoogleSelectAccount, getGmailToken, supabase } from '../lib/supabase';
+import { API_BASE_URL } from '../lib/config.js';
 
-const API = 'https://back-end-auto-office-f8xt.vercel.app';
+const API = API_BASE_URL;
 
 /**
  * EmailAccountNode

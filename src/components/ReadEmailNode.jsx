@@ -2,6 +2,7 @@ import { useState, memo } from 'react';
 import { Handle, Position } from 'reactflow';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
+import { API_BASE_URL } from '../lib/config.js';
 import {
   Mail,
   MailOpen,
@@ -217,7 +218,7 @@ const ReadEmailNode = memo(({ data, selected, id }) => {
             options,
           };
 
-      const response = await fetch('https://back-end-auto-office-f8xt.vercel.app/api/email/read', {
+      const response = await fetch(`${API_BASE_URL}/api/email/read`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -11,6 +11,7 @@ import {
   CheckCircle,
   ChevronDown
 } from 'lucide-react';
+import { API_BASE_URL } from '../lib/config.js';
 
 const FIELDS = [
   { value: 'from',    label: 'From' },
@@ -101,7 +102,7 @@ const FilterEmailNode = memo(({ data, selected, id }) => {
     try {
       const token = localStorage.getItem('office_weave_token') || localStorage.getItem('auth_token');
 
-      const response = await fetch('https://back-end-auto-office-f8xt.vercel.app/api/email/filter', {
+      const response = await fetch(`${API_BASE_URL}/api/email/filter`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

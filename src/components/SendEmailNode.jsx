@@ -13,6 +13,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { supabase } from '../lib/supabase.js';
+import { API_BASE_URL } from '../lib/config.js';
 
 /**
  * SendEmailNode - Enhanced node for sending emails via Gmail SMTP
@@ -344,7 +345,7 @@ const SendEmailNode = memo(({ data, selected, id }) => {
         refreshTokenPreview: credentials.gmailRefreshToken?.slice(0, 20) + '...',
       });
       
-      const response = await fetch('https://back-end-auto-office-f8xt.vercel.app/api/email/send', {
+      const response = await fetch(`${API_BASE_URL}/api/email/send`, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify(requestBody),

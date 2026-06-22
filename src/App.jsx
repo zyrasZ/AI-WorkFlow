@@ -36,6 +36,7 @@ import nodeRegistry from './registry/NodeRegistry.js'
 import engine from './engine/Engine.js'
 import { useCanvasLogic } from './hooks/useCanvasLogic.js'
 import { apiClient } from './lib/api.js'
+import { API_BASE_URL } from './lib/config.js'
 
 // Page Transition Variants
 const pageVariants = {
@@ -194,7 +195,7 @@ export default function App() {
       window.history.replaceState({}, '', window.location.pathname)
 
       // Fetch user info from backend
-      const API_BASE = import.meta.env.VITE_API_URL || 'https://back-end-auto-office-f8xt.vercel.app'
+      const API_BASE = API_BASE_URL
       console.log('📥 Fetching user info from:', `${API_BASE}/api/auth/user`)
       
       fetch(`${API_BASE}/api/auth/user`, {
@@ -932,7 +933,7 @@ export default function App() {
         const lastData = JSON.parse(lastSaveDataRef.current);
         isStructuralChange = lastData.nodes.length !== nodes.length || 
                            lastData.edges.length !== edges.length;
-      } catch (e) {
+      } catch {
         isStructuralChange = true;
       }
     } else {
@@ -1000,6 +1001,7 @@ export default function App() {
   }, [])
 
   // Execute workflow with SERVER-SIDE execution
+  // eslint-disable-next-line no-unused-vars
   const handleRunWorkflow = async () => {
     if (isExecuting) {
       // Cancel execution — just reset UI state (server will timeout on its own)
@@ -1450,7 +1452,7 @@ export default function App() {
     } catch (error) {
       console.error('Error parsing drag data:', error);
     }
-  }, [reactFlowInstance, setNodes, handleNodeDataChange, handleNodeResult])
+  }, [reactFlowInstance, setNodes, handleNodeDataChange, handleNodeResult, handlePromptChange])
 
   return (
     <>

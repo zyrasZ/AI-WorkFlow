@@ -3,6 +3,8 @@
  * Inspired by LiteGraph.js - handles graph traversal and node execution
  */
 
+import { API_BASE_URL } from '../lib/config.js';
+
 class ExecutionEngine {
   constructor() {
     this.isRunning = false;
@@ -593,7 +595,7 @@ const defaultProcessors = {
   'readEmailNode': async (nodeData, inputData) => {
     console.log('📬 ReadEmail Node Processing:', nodeData.label);
 
-    const API = 'https://back-end-auto-office-f8xt.vercel.app';
+    const API = API_BASE_URL;
 
     // ── 1. Detect provider from connected EmailAccountNode credentials ──
     const getCredentials = () => {
@@ -689,7 +691,7 @@ const defaultProcessors = {
 
     console.log('📤 ReadEmail request:', { provider: credInfo.provider, options });
 
-    const response = await fetch(`${API}/api/email/read`, {
+    const response = await fetch(`${API_BASE_URL}/api/email/read`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -720,7 +722,7 @@ const defaultProcessors = {
   'sendEmailNode': async (nodeData, inputData) => {
     console.log('📧 SendEmail Node Processing:', nodeData.label);
 
-    const API = 'https://back-end-auto-office-f8xt.vercel.app';
+    const API = API_BASE_URL;
 
     // ── 1. Detect provider + build credentials from connected EmailAccountNode ──
     const getCredentials = () => {

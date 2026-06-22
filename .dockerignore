@@ -1,0 +1,15 @@
+node_modules
+.dist
+dist
+.vscode
+.git
+.gitignore
+*.log
+*.md
+.env.local
+.env
+back_end_Auto_Office/node_modules
+back_end_Auto_Office/.next
+back_end_Auto_Office/.env
+back_end_Auto_Office/.env.local
+back_end_Auto_Office/.git

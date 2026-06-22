@@ -1,9 +1,8 @@
 /**
  * API Client for Backend Communication
- * Base URL: https://back-end-auto-office-f8xt.vercel.app
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://back-end-auto-office-f8xt.vercel.app'
+import { API_BASE_URL } from './config.js';
 
 /**
  * Base API request handler
