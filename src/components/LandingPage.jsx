@@ -1,43 +1,60 @@
 /**
  * LandingPage.jsx — NOMADS
- * Clean rewrite: GSAP + ScrollTrigger with custom scroller (#landing-scroller)
+ * Editorial broadsheet layout from DESIGN.md
+ * Dark canvas #0B0B0E, orange-500 as primary CTA, editorial serif typography
  */
 import { useRef, useEffect, forwardRef, useCallback } from 'react'
-import { Layers, Cpu, Users, Database, GitBranch, Wrench, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 gsap.registerPlugin(ScrollTrigger)
 
-const SCROLLER = '#landing-scroller'
-const glass = 'bg-white/5 backdrop-blur-xl border border-white/10'
-const orangeGrad = 'bg-gradient-to-r from-orange-500 to-amber-400 text-black font-bold shadow-[0_0_28px_rgba(234,97,19,0.45)] hover:shadow-[0_0_44px_rgba(234,97,19,0.7)] transition-all duration-200'
+/* ─── CSS tokens (DESIGN.md adapted for dark canvas) ─── */
+const tokens = {
+  canvas:     '#0B0B0E',
+  ink:        '#f0f0ee',      // near-white on dark, mirrors Linen↔Obsidian flip
+  inkMuted:   'rgba(240,240,238,0.38)',
+  inkFaint:   'rgba(240,240,238,0.08)',
+  sage:       'rgba(240,240,238,0.22)',
+  accent:     '#f97316',      // orange-500 — CTA, mark, tick
+  accentGlow: 'rgba(249,115,22,0.45) 1px 8px 20px 0px, rgba(249,115,22,0.25) 1px 8px 20px 0px',
+  mist:       'rgba(240,240,238,0.06)',
+  panel:      '#080809',
+}
 
-/* ─── ScrollReveal hook — plays on enter, reverses on scroll back up ─── */
+/* ─── ScrollReveal — use the App.jsx motion.div as scroller ─── */
 function useScrollReveal(ref, animateFn, start = 'top 88%') {
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    const st = ScrollTrigger.create({
-      trigger: el,
-      scroller: SCROLLER,
-      start,
-      end: 'bottom 5%',
-      onEnter: () => animateFn(el, false),
-      onLeaveBack: () => animateFn(el, true),
-    })
-    return () => st.kill()
+    const scroller = document.getElementById('landing-scroller') || window
+    let st
+    try {
+      st = ScrollTrigger.create({
+        trigger: el,
+        scroller,
+        start,
+        end: 'bottom 5%',
+        onEnter: () => animateFn(el, false),
+        onLeaveBack: () => animateFn(el, true),
+      })
+    } catch (e) {
+      // fallback: just animate immediately
+      animateFn(el, false)
+    }
+    return () => st && st.kill()
   }, [ref, animateFn, start])
 }
 
 /* ─── Magnetic Button ─── */
-const MagneticBtn = forwardRef(function MagneticBtn({ children, className, onClick }, ref) {
+const MagneticBtn = forwardRef(function MagneticBtn({ children, className, style, onClick }, ref) {
   const inner = useRef(null)
   const el = ref || inner
   return (
-    <button ref={el} className={className} onClick={onClick}
+    <button ref={el} className={className} style={style} onClick={onClick}
       onMouseMove={(e) => {
         const r = el.current.getBoundingClientRect()
-        gsap.to(el.current, { x: (e.clientX - r.left - r.width / 2) * 0.35, y: (e.clientY - r.top - r.height / 2) * 0.35, scale: 1.06, duration: 0.4, ease: 'power2.out' })
+        gsap.to(el.current, { x: (e.clientX - r.left - r.width / 2) * 0.3, y: (e.clientY - r.top - r.height / 2) * 0.3, scale: 1.05, duration: 0.4, ease: 'power2.out' })
       }}
       onMouseLeave={() => gsap.to(el.current, { x: 0, y: 0, scale: 1, duration: 0.6, ease: 'elastic.out(1,0.4)' })}>
       {children}
@@ -60,10 +77,15 @@ function CursorGlow() {
   return (
     <div ref={ref} className="pointer-events-none fixed z-[9999] top-0 left-0" style={{
       width: 320, height: 320, marginLeft: -160, marginTop: -160, borderRadius: '50%',
-      background: 'radial-gradient(circle, rgba(234,97,19,0.13) 0%, transparent 70%)',
+      background: 'radial-gradient(circle, rgba(249,115,22,0.10) 0%, transparent 70%)',
       mixBlendMode: 'screen', willChange: 'transform',
     }} />
   )
+}
+
+/* ─── Accent Tick (DESIGN.md: short horizontal orange line) ─── */
+function AccentTick({ className = '' }) {
+  return <div className={`w-[50px] h-[2px] ${className}`} style={{ background: tokens.accent }} />
 }
 
 /* ─── NodeCircuitAnimation ─── */
@@ -91,7 +113,7 @@ function NodeCircuitAnimation() {
       <style>{`
         @keyframes nca-pulse{0%{stroke-dashoffset:340;opacity:0}8%{opacity:1}72%{opacity:.85}100%{stroke-dashoffset:0;opacity:0}}
         @keyframes nca-particle{0%{offset-distance:0%;opacity:0}6%{opacity:1}88%{opacity:1}100%{offset-distance:100%;opacity:0}}
-        @keyframes nca-chip-glow{0%,100%{filter:drop-shadow(0 0 16px rgba(234,97,19,.65))}50%{filter:drop-shadow(0 0 28px rgba(234,97,19,.95))}}
+        @keyframes nca-chip-glow{0%,100%{filter:drop-shadow(0 0 16px rgba(249,115,22,.65))}50%{filter:drop-shadow(0 0 28px rgba(249,115,22,.95))}}
         @keyframes nca-spin{from{transform:rotate(0deg);transform-origin:${CX}px ${CY}px}to{transform:rotate(360deg);transform-origin:${CX}px ${CY}px}}
         @keyframes nca-spin-r{from{transform:rotate(0deg);transform-origin:${CX}px ${CY}px}to{transform:rotate(-360deg);transform-origin:${CX}px ${CY}px}}
         @keyframes nca-scan{0%{transform:translateY(-${CH/2}px);opacity:0}12%{opacity:.5}88%{opacity:.5}100%{transform:translateY(${CH/2}px);opacity:0}}
@@ -122,25 +144,20 @@ function NodeCircuitAnimation() {
           </filter>
           <clipPath id="chip-clip"><rect x={CX-CW/2+3} y={CY-CH/2+3} width={CW-6} height={CH-6} rx={15}/></clipPath>
         </defs>
-        {/* tracks */}
         {leftNodes.map(n=><path key={`tl-${n.id}`} d={pL(n.cy)} fill="none" stroke="rgba(255,255,255,.05)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>)}
         {rightNodes.map(n=><path key={`tr-${n.id}`} d={pR(n.cy)} fill="none" stroke="rgba(255,255,255,.05)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>)}
-        {/* pulses */}
         {leftNodes.map((n,i)=><path key={`pl-${n.id}`} d={pL(n.cy)} fill="none" stroke={n.dot} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="50 340" strokeDashoffset="340" filter="url(#glow-sm)" style={{animation:`nca-pulse 3.2s ease ${delays[i]}s infinite`}}/>)}
         {rightNodes.map((n,i)=><path key={`pr-${n.id}`} d={pR(n.cy)} fill="none" stroke={n.dot} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="50 340" strokeDashoffset="340" filter="url(#glow-sm)" style={{animation:`nca-pulse 3.2s ease ${delays[i]+0.4}s infinite`}}/>)}
-        {/* rings */}
-        <ellipse cx={CX} cy={CY} rx={CW/2+26} ry={CH/2+26} fill="none" stroke="rgba(234,97,19,.15)" strokeWidth="1" strokeDasharray="6 5" style={{animation:'nca-spin 14s linear infinite'}}/>
+        <ellipse cx={CX} cy={CY} rx={CW/2+26} ry={CH/2+26} fill="none" stroke="rgba(249,115,22,.15)" strokeWidth="1" strokeDasharray="6 5" style={{animation:'nca-spin 14s linear infinite'}}/>
         <ellipse cx={CX} cy={CY} rx={CW/2+16} ry={CH/2+16} fill="none" stroke="rgba(251,191,36,.1)" strokeWidth="1" strokeDasharray="3 7" style={{animation:'nca-spin-r 9s linear infinite'}}/>
-        {/* pins */}
         {[-30,-10,10,30].map((off,i)=>(
           <g key={`pin-${i}`}>
-            <line x1={CX+off} y1={CY+CH/2} x2={CX+off} y2={CY+CH/2+18} stroke="#EA6113" strokeWidth="1.5" strokeLinecap="round" style={{animation:`nca-pin 2s ease ${i*.3}s infinite`,filter:'drop-shadow(0 0 3px #EA6113)'}}/>
-            <line x1={CX+off} y1={CY-CH/2} x2={CX+off} y2={CY-CH/2-18} stroke="rgba(234,97,19,.35)" strokeWidth="1.5" strokeLinecap="round" style={{animation:`nca-pin 2.4s ease ${i*.25}s infinite`}}/>
+            <line x1={CX+off} y1={CY+CH/2} x2={CX+off} y2={CY+CH/2+18} stroke="#f97316" strokeWidth="1.5" strokeLinecap="round" style={{animation:`nca-pin 2s ease ${i*.3}s infinite`,filter:'drop-shadow(0 0 3px #f97316)'}}/>
+            <line x1={CX+off} y1={CY-CH/2} x2={CX+off} y2={CY-CH/2-18} stroke="rgba(249,115,22,.35)" strokeWidth="1.5" strokeLinecap="round" style={{animation:`nca-pin 2.4s ease ${i*.25}s infinite`}}/>
           </g>
         ))}
-        {/* chip */}
         <g style={{animation:'nca-chip-glow 3s ease-in-out infinite'}}>
-          <rect x={CX-CW/2-6} y={CY-CH/2-6} width={CW+12} height={CH+12} rx={24} fill="rgba(234,97,19,.05)"/>
+          <rect x={CX-CW/2-6} y={CY-CH/2-6} width={CW+12} height={CH+12} rx={24} fill="rgba(249,115,22,.05)"/>
           <rect x={CX-CW/2} y={CY-CH/2} width={CW} height={CH} rx={18} fill="url(#chip-g)" stroke="url(#chip-b)" strokeWidth="1.5"/>
           <rect x={CX-CW/2+8} y={CY-CH/2+8} width={CW-16} height={CH-16} rx={12} fill="none" stroke="rgba(255,255,255,.06)" strokeWidth="1"/>
           <g clipPath="url(#chip-clip)">
@@ -148,14 +165,13 @@ function NodeCircuitAnimation() {
           </g>
           {[[-1,-1],[1,-1],[1,1],[-1,1]].map(([sx,sy],i)=>(
             <g key={`c-${i}`}>
-              <line x1={CX+sx*(CW/2-10)} y1={CY+sy*(CH/2-10)} x2={CX+sx*(CW/2-10)} y2={CY+sy*(CH/2-22)} stroke="rgba(234,97,19,.55)" strokeWidth="2" strokeLinecap="round"/>
-              <line x1={CX+sx*(CW/2-10)} y1={CY+sy*(CH/2-10)} x2={CX+sx*(CW/2-22)} y2={CY+sy*(CH/2-10)} stroke="rgba(234,97,19,.55)" strokeWidth="2" strokeLinecap="round"/>
+              <line x1={CX+sx*(CW/2-10)} y1={CY+sy*(CH/2-10)} x2={CX+sx*(CW/2-10)} y2={CY+sy*(CH/2-22)} stroke="rgba(249,115,22,.55)" strokeWidth="2" strokeLinecap="round"/>
+              <line x1={CX+sx*(CW/2-10)} y1={CY+sy*(CH/2-10)} x2={CX+sx*(CW/2-22)} y2={CY+sy*(CH/2-10)} stroke="rgba(249,115,22,.55)" strokeWidth="2" strokeLinecap="round"/>
             </g>
           ))}
           <text x={CX} y={CY+2} textAnchor="middle" fill="white" fontSize="28" fontWeight="900" fontFamily="Inter,sans-serif" style={{letterSpacing:'-.03em'}}>AI</text>
-          <text x={CX} y={CY+20} textAnchor="middle" fill="rgba(234,97,19,.8)" fontSize="7" fontWeight="700" fontFamily="monospace" style={{letterSpacing:'.28em'}}>NOMADS</text>
+          <text x={CX} y={CY+20} textAnchor="middle" fill="rgba(249,115,22,.8)" fontSize="7" fontWeight="700" fontFamily="monospace" style={{letterSpacing:'.28em'}}>NOMADS</text>
         </g>
-        {/* left nodes */}
         {leftNodes.map((n,i)=>(
           <g key={`nl-${n.id}`} style={{animation:`nca-in .7s cubic-bezier(.16,1,.3,1) ${.08+i*.13}s both, nca-breathe 4s ease ${i*.6}s infinite`}}>
             <rect x={LX+3} y={n.cy+4} width={NW} height={NH} rx={NR} fill={n.color} opacity=".07"/>
@@ -169,7 +185,6 @@ function NodeCircuitAnimation() {
             <circle cx={LX+NW+1} cy={n.cy+NH/2} r="9" fill="none" stroke={n.dot} strokeWidth="1" strokeOpacity=".2"/>
           </g>
         ))}
-        {/* right nodes */}
         {rightNodes.map((n,i)=>(
           <g key={`nr-${n.id}`} style={{animation:`nca-in-r .7s cubic-bezier(.16,1,.3,1) ${.12+i*.13}s both, nca-breathe 4s ease ${i*.6+.3}s infinite`}}>
             <rect x={RX+3} y={n.cy+4} width={NW} height={NH} rx={NR} fill={n.color} opacity=".07"/>
@@ -183,7 +198,6 @@ function NodeCircuitAnimation() {
             <circle cx={RX+NW-16} cy={n.cy+NH/2} r="4" fill={n.dot} filter="url(#glow-sm)" style={{animation:`nca-dot 2.2s ease ${i*.4+.2}s infinite`}}/>
           </g>
         ))}
-        {/* particles */}
         {leftNodes.map((n,i)=><circle key={`pal-${n.id}`} r="3" fill={n.dot} filter="url(#glow-md)" style={{offsetPath:`path("${pL(n.cy)}")`,animation:`nca-particle 3.2s ease ${delays[i]+.15}s infinite`}}/>)}
         {rightNodes.map((n,i)=><circle key={`par-${n.id}`} r="3" fill={n.dot} filter="url(#glow-md)" style={{offsetPath:`path("${pR(n.cy)}")`,animation:`nca-particle 3.2s ease ${delays[i]+.5}s infinite`}}/>)}
       </svg>
@@ -191,509 +205,9 @@ function NodeCircuitAnimation() {
   )
 }
 
-/* ─── Navbar ─── */
-function Navbar({ onEnter, onNavigateToDocs }) {
-  const navRef = useRef(null)
-  const logoRef = useRef(null)
-  const linksRef = useRef(null)
-  const actionsRef = useRef(null)
-
-  useEffect(() => {
-    const nav = navRef.current, logo = logoRef.current
-    const links = linksRef.current, actions = actionsRef.current
-    if (!nav || !logo || !links || !actions) return
-    gsap.set(logo, { x: -40, opacity: 0 })
-    gsap.set(links.children, { y: -20, opacity: 0 })
-    gsap.set(actions.children, { opacity: 0, y: -10 })
-    const tl = gsap.timeline({ defaults: { ease: 'power3.out' }, delay: 0.1 })
-    tl.to(logo, { x: 0, opacity: 1, duration: 0.7 })
-      .to(links.children, { y: 0, opacity: 1, duration: 0.5, stagger: 0.07 }, '-=0.4')
-      .to(actions.children, { opacity: 1, y: 0, duration: 0.45, stagger: 0.08 }, '-=0.3')
-    const scroller = document.getElementById('landing-scroller') || window
-    const onScroll = () => {
-      const scrolled = (scroller === window ? window.scrollY : scroller.scrollTop) > 40
-      gsap.to(nav, { paddingTop: scrolled ? '6px' : '12px', paddingBottom: scrolled ? '6px' : '12px', duration: 0.35, ease: 'power2.out' })
-    }
-    scroller.addEventListener('scroll', onScroll, { passive: true })
-    return () => { tl.kill(); scroller.removeEventListener('scroll', onScroll) }
-  }, [])
-
-  return (
-    <div className="sticky top-0 z-50 w-full flex justify-center px-4 pt-4">
-      <header className="w-full max-w-5xl">
-        <nav ref={navRef} className={`${glass} rounded-2xl px-5 py-3 flex items-center justify-between shadow-[0_8px_40px_rgba(0,0,0,0.5)]`}>
-          <span ref={logoRef} className="text-white font-black text-sm tracking-[0.22em] select-none">NOMADS</span>
-          <div ref={linksRef} className="hidden md:flex items-center gap-7">
-            {['Canvas', 'Nodes', 'Templates', 'Pricing'].map(l => (
-              <a key={l} href="#" className="text-white/50 hover:text-white text-sm font-medium transition-colors duration-200">{l}</a>
-            ))}
-            <button onClick={onNavigateToDocs} className="text-white/50 hover:text-white text-sm font-medium transition-colors duration-200">Docs</button>
-          </div>
-          <div ref={actionsRef} className="flex items-center gap-3">
-            <MagneticBtn onClick={onEnter} className={`${orangeGrad} text-xs px-4 py-2 rounded-xl`}>Get Started For Free</MagneticBtn>
-          </div>
-        </nav>
-      </header>
-    </div>
-  )
-}
-
-/* ─── Hero ─── */
-function Hero({ onEnter }) {
-  const sectionRef = useRef(null)
-  const badgeRef = useRef(null)
-  const headlineRef = useRef(null)
-  const subRef = useRef(null)
-  const circuitRef = useRef(null)
-  const ctaRef = useRef(null)
-  const btnRef = useRef(null)
-
-  useEffect(() => {
-    // Direct gsap calls - NO gsap.context()
-    gsap.set([badgeRef.current, subRef.current, ctaRef.current], { opacity: 0, y: 20 })
-    gsap.set(circuitRef.current, { opacity: 0, x: 40 })
-    const charEls = headlineRef.current?.querySelectorAll('.hero-char')
-    if (charEls?.length) gsap.set(charEls, { opacity: 0, y: 30 })
-
-    const tl = gsap.timeline({ defaults: { ease: 'power3.out' }, delay: 0.2 })
-    tl.to(badgeRef.current, { opacity: 1, y: 0, duration: 0.6 })
-    if (charEls?.length) tl.to(charEls, { opacity: 1, y: 0, duration: 0.5, stagger: 0.015 }, '-=0.3')
-    tl.to(subRef.current, { opacity: 1, y: 0, duration: 0.5 }, '-=0.2')
-      .to(ctaRef.current, { opacity: 1, y: 0, duration: 0.5 }, '-=0.3')
-      .to(circuitRef.current, { opacity: 1, x: 0, duration: 0.8, ease: 'power2.out' }, '-=0.5')
-
-    // Parallax on background glows - direct ScrollTrigger (no context)
-    const glows = sectionRef.current?.querySelectorAll('.hero-glow')
-    glows?.forEach((g, i) => {
-      gsap.to(g, {
-        y: i === 0 ? -80 : -50,
-        ease: 'none',
-        scrollTrigger: { trigger: sectionRef.current, scroller: SCROLLER, start: 'top top', end: 'bottom top', scrub: 1.5 }
-      })
-    })
-
-    return () => {
-      tl.kill()
-      ScrollTrigger.getAll().forEach(t => {
-        if (t.vars.trigger === sectionRef.current) t.kill()
-      })
-    }
-  }, [])
-
-  const lines = [
-    { text: 'NOMADS:', gradient: true },
-    { text: 'No-Code Workflow', gradient: false },
-    { text: 'Automation', gradient: false },
-  ]
-
-  const renderLine = (line, idx) => (
-    <div key={idx} style={{ overflow: 'hidden', display: 'block' }}>
-      <span className={line.gradient ? 'inline-block' : 'text-white inline-block'} style={{ perspective: 600 }}>
-        {line.text.split('').map((ch, ci) => (
-          <span key={ci} className={`hero-char inline-block ${line.gradient ? 'bg-gradient-to-r from-amber-300 via-orange-400 to-orange-500 bg-clip-text text-transparent' : ''}`}
-            style={{ whiteSpace: ch === ' ' ? 'pre' : 'normal', WebkitBackgroundClip: line.gradient ? 'text' : undefined, WebkitTextFillColor: line.gradient ? 'transparent' : undefined }}>
-            {ch === ' ' ? '\u00A0' : ch}
-          </span>
-        ))}
-      </span>
-    </div>
-  )
-
-  return (
-    <section ref={sectionRef} className="relative min-h-screen flex items-center pt-8 pb-20 px-5 overflow-hidden">
-      <div className="hero-glow absolute top-1/3 left-1/4 w-[500px] h-[500px] rounded-full bg-purple-600/10 blur-[140px] pointer-events-none" />
-      <div className="hero-glow absolute top-1/4 right-0 w-[600px] h-[600px] rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(234,97,19,0.12) 0%, transparent 65%)' }} />
-      <div className="relative z-10 w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
-        <div className="flex-1 flex flex-col items-start text-left max-w-xl">
-          <div ref={badgeRef} className="inline-flex items-center gap-2 mb-7">
-            <span className={`${glass} text-xs text-white/60 font-medium px-4 py-1.5 rounded-full`}>
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 mr-2" style={{ boxShadow: '0 0 6px #F59E0B' }} />
-              No-Code Workflow Automation
-            </span>
-          </div>
-          <h1 ref={headlineRef} className="text-5xl sm:text-6xl md:text-7xl font-black leading-[1.05] tracking-tight mb-6">
-            {lines.map((l, i) => renderLine(l, i))}
-          </h1>
-          <p ref={subRef} className="text-white/50 text-lg md:text-xl mb-10 font-medium leading-relaxed">
-            Streamline office tasks with an artistic, visual approach.
-          </p>
-          <div ref={ctaRef}>
-            <MagneticBtn ref={btnRef} onClick={onEnter}
-              className={`${orangeGrad} flex items-center gap-2 text-sm px-8 py-3.5 rounded-full`}>
-              Start Building for Free <ArrowRight size={16} />
-            </MagneticBtn>
-          </div>
-        </div>
-        <div ref={circuitRef} className="flex-1 w-full min-w-0 flex items-center justify-center">
-          <NodeCircuitAnimation />
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/* ─── HowItWorks ─── */
-function HowItWorks() {
-  const sectionRef = useRef(null)
-  const headRef = useRef(null)
-  const gridRef = useRef(null)
-
-  // Set initial hidden state on mount
-  useEffect(() => {
-    if (headRef.current) gsap.set(headRef.current, { opacity: 0, y: 40 })
-  }, [])
-
-  const animateHead = useCallback((el, reverse) => {
-    if (reverse) gsap.to(el, { opacity: 0, y: 40, duration: 0.4, ease: 'power2.in' })
-    else gsap.to(el, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' })
-  }, [])
-  const animateGrid = useCallback((el, reverse) => {
-    const items = el.querySelectorAll('.hiw-step')
-    if (reverse) gsap.to(items, { opacity: 0, y: 40, duration: 0.35, stagger: 0.08, ease: 'power2.in' })
-    else gsap.fromTo(items, { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.15, ease: 'power3.out' })
-  }, [])
-
-  useScrollReveal(headRef, animateHead)
-  useScrollReveal(gridRef, animateGrid)
-
-  const steps = [
-    {
-      num: '01',
-      title: 'Connect Apps',
-      desc: 'Link your favorite office tools — email, spreadsheets, calendars — in seconds with our pre-built connectors.',
-      color: '#f59e0b',
-      icon: (
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-        </svg>
-      ),
-    },
-    {
-      num: '02',
-      title: 'Build Logic',
-      desc: 'Drag, drop, and connect nodes on a visual canvas. Add AI, conditions, loops — no code required.',
-      color: '#8b5cf6',
-      icon: (
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-          <rect x="3" y="14" width="7" height="7" rx="1"/><path d="M17.5 17.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0"/>
-          <path d="M6.5 10v4M10 6.5h4M17.5 10v4"/>
-        </svg>
-      ),
-    },
-    {
-      num: '03',
-      title: 'Automate',
-      desc: 'Activate your workflow and watch tasks complete themselves. Monitor runs in real-time from your dashboard.',
-      color: '#0ea5e9',
-      icon: (
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-        </svg>
-      ),
-    },
-  ]
-
-  return (
-    <section ref={sectionRef} className="relative py-28 px-5 overflow-hidden"
-      >
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] rounded-full bg-purple-900/10 blur-[120px]" />
-      </div>
-      <div className="relative z-10 max-w-6xl mx-auto">
-        <div ref={headRef} className="text-center mb-16" >
-          <span className="text-xs font-bold tracking-[0.3em] text-amber-400/70 uppercase mb-4 block">How It Works</span>
-          <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Three steps to automation</h2>
-          <p className="text-white/40 text-lg max-w-xl mx-auto">From idea to running workflow in minutes, not months.</p>
-        </div>
-        <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {steps.map((step) => (
-            <div key={step.num} className={`hiw-step ${glass} rounded-2xl p-8 relative overflow-hidden cursor-default`}
-              
-              onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -6, duration: 0.3, ease: 'power2.out' })}
-              onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.5, ease: 'elastic.out(1,0.5)' })}>
-              <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-[60px] pointer-events-none"
-                style={{ background: `${step.color}18` }} />
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6"
-                style={{ background: `${step.color}15`, border: `1px solid ${step.color}30` }}>
-                {step.icon}
-              </div>
-              <div className="text-xs font-black tracking-[0.25em] mb-3" style={{ color: step.color }}>{step.num}</div>
-              <h3 className="text-xl font-bold text-white mb-3">{step.title}</h3>
-              <p className="text-white/45 text-sm leading-relaxed">{step.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/* ─── FeaturesGrid ─── */
-function FeaturesGrid() {
-  const sectionRef = useRef(null)
-  const headRef = useRef(null)
-  const gridRef = useRef(null)
-
-  useEffect(() => {
-    if (headRef.current) gsap.set(headRef.current, { opacity: 0, y: 40 })
-  }, [])
-
-  const animateHead = useCallback((el, reverse) => {
-    if (reverse) gsap.to(el, { opacity: 0, y: 40, duration: 0.4, ease: 'power2.in' })
-    else gsap.to(el, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' })
-  }, [])
-  const animateGrid = useCallback((el, reverse) => {
-    const items = el.querySelectorAll('.feat-card')
-    if (reverse) gsap.to(items, { opacity: 0, y: 40, scale: 0.96, duration: 0.35, stagger: 0.06, ease: 'power2.in' })
-    else gsap.fromTo(items, { opacity: 0, y: 40, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.55, stagger: 0.12, ease: 'power3.out' })
-  }, [])
-
-  useScrollReveal(headRef, animateHead)
-  useScrollReveal(gridRef, animateGrid)
-
-  const features = [
-    {
-      num: '01',
-      title: 'Drag & Drop Canvas',
-      desc: 'Build complex workflows visually. Connect nodes with a click, rearrange freely, and see your logic come alive.',
-      color: '#f59e0b',
-      icon: (
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M5 9l4-4 4 4"/><path d="M9 5v14"/><path d="M19 15l-4 4-4-4"/><path d="M15 19V5"/>
-        </svg>
-      ),
-    },
-    {
-      num: '02',
-      title: 'AI-Powered Nodes',
-      desc: 'Embed GPT, Llama, and other AI models directly into your workflows. Summarize, classify, generate — all automated.',
-      color: '#8b5cf6',
-      icon: (
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 0 6h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1 0-6h1V6a4 4 0 0 1 4-4z"/>
-          <circle cx="9" cy="9" r="1" fill="#8b5cf6"/><circle cx="15" cy="9" r="1" fill="#8b5cf6"/>
-        </svg>
-      ),
-    },
-    {
-      num: '03',
-      title: 'Real-time Monitoring',
-      desc: 'Watch every workflow run live. Inspect node outputs, catch errors instantly, and replay failed steps.',
-      color: '#0ea5e9',
-      icon: (
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-        </svg>
-      ),
-    },
-    {
-      num: '04',
-      title: 'One-click Deploy',
-      desc: 'Publish your workflow with a single click. Schedule it, trigger via webhook, or run on demand — your choice.',
-      color: '#10b981',
-      icon: (
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
-        </svg>
-      ),
-    },
-  ]
-
-  return (
-    <section ref={sectionRef} className="relative py-28 px-5 overflow-hidden"
-      >
-      <div className="relative z-10 max-w-6xl mx-auto">
-        <div ref={headRef} className="text-center mb-16" >
-          <span className="text-xs font-bold tracking-[0.3em] text-purple-400/70 uppercase mb-4 block">Features</span>
-          <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Everything you need</h2>
-          <p className="text-white/40 text-lg max-w-xl mx-auto">Powerful tools designed for teams who want results, not complexity.</p>
-        </div>
-        <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          {features.map((feat) => (
-            <div key={feat.num} className={`feat-card ${glass} rounded-2xl p-8 relative overflow-hidden cursor-default`}
-              
-              onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -5, duration: 0.3, ease: 'power2.out' })}
-              onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.5, ease: 'elastic.out(1,0.5)' })}>
-              <div className="absolute top-0 right-0 w-40 h-40 rounded-full blur-[80px] pointer-events-none"
-                style={{ background: `${feat.color}12` }} />
-              <div className="flex items-start gap-5">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: `${feat.color}15`, border: `1px solid ${feat.color}30` }}>
-                  {feat.icon}
-                </div>
-                <div>
-                  <div className="text-xs font-black tracking-[0.25em] mb-2" style={{ color: feat.color }}>{feat.num}</div>
-                  <h3 className="text-lg font-bold text-white mb-2">{feat.title}</h3>
-                  <p className="text-white/45 text-sm leading-relaxed">{feat.desc}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/* ─── CoreComponents ─── */
-function CoreComponents() {
-  const sectionRef = useRef(null)
-  const headRef = useRef(null)
-  const gridRef = useRef(null)
-
-  useEffect(() => {
-    if (headRef.current) gsap.set(headRef.current, { opacity: 0, y: 40 })
-  }, [])
-
-  const animateHead = useCallback((el, reverse) => {
-    if (reverse) gsap.to(el, { opacity: 0, y: 40, duration: 0.4, ease: 'power2.in' })
-    else gsap.to(el, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' })
-  }, [])
-  const animateGrid = useCallback((el, reverse) => {
-    const items = el.querySelectorAll('.core-card')
-    if (reverse) gsap.to(items, { opacity: 0, y: 50, duration: 0.35, stagger: 0.08, ease: 'power2.in' })
-    else gsap.fromTo(items, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.65, stagger: 0.15, ease: 'power3.out' })
-  }, [])
-
-  useScrollReveal(headRef, animateHead)
-  useScrollReveal(gridRef, animateGrid)
-
-  const cards = [
-    {
-      title: 'Visual Canvas',
-      desc: 'An infinite, zoomable canvas where you design workflows like an artist. Pan, zoom, group nodes, and build with total freedom.',
-      color: '#f59e0b',
-      Icon: Layers,
-    },
-    {
-      title: 'AI & Office Node Library',
-      desc: 'Over 50 pre-built nodes covering AI models, email, spreadsheets, calendars, databases, and more — ready to drop in.',
-      color: '#8b5cf6',
-      Icon: Cpu,
-    },
-    {
-      title: 'Real-time Collaboration',
-      desc: 'Invite teammates to edit workflows together. See cursors, changes, and comments live — like Figma for automation.',
-      color: '#0ea5e9',
-      Icon: Users,
-    },
-  ]
-
-  const handleTilt = (e, el) => {
-    const r = el.getBoundingClientRect()
-    const x = (e.clientY - r.top - r.height / 2) / (r.height / 2)
-    const y = -(e.clientX - r.left - r.width / 2) / (r.width / 2)
-    gsap.to(el, { rotateX: x * 8, rotateY: y * 8, scale: 1.03, duration: 0.3, ease: 'power2.out', transformPerspective: 800 })
-  }
-  const resetTilt = (el) => {
-    gsap.to(el, { rotateX: 0, rotateY: 0, scale: 1, duration: 0.6, ease: 'elastic.out(1,0.5)' })
-  }
-
-  return (
-    <section ref={sectionRef} className="relative py-28 px-5 overflow-hidden"
-      >
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] rounded-full bg-amber-900/8 blur-[100px]" />
-      </div>
-      <div className="relative z-10 max-w-6xl mx-auto">
-        <div ref={headRef} className="text-center mb-16" >
-          <span className="text-xs font-bold tracking-[0.3em] text-amber-400/70 uppercase mb-4 block">Core Components</span>
-          <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Built for power users</h2>
-          <p className="text-white/40 text-lg max-w-xl mx-auto">Three pillars that make NOMADS the most capable no-code automation platform.</p>
-        </div>
-        <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {cards.map((card) => (
-            <div key={card.title} className={`core-card ${glass} rounded-2xl p-8 relative overflow-hidden cursor-default`}
-              style={{ opacity: 0, transformStyle: 'preserve-3d' }}
-              onMouseMove={(e) => handleTilt(e, e.currentTarget)}
-              onMouseLeave={(e) => resetTilt(e.currentTarget)}>
-              <div className="absolute inset-0 rounded-2xl pointer-events-none"
-                style={{ background: `radial-gradient(circle at 50% 0%, ${card.color}10 0%, transparent 60%)` }} />
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6"
-                style={{ background: `${card.color}15`, border: `1px solid ${card.color}30` }}>
-                <card.Icon size={26} color={card.color} />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">{card.title}</h3>
-              <p className="text-white/45 text-sm leading-relaxed">{card.desc}</p>
-              <div className="absolute bottom-0 left-0 right-0 h-px"
-                style={{ background: `linear-gradient(90deg, transparent, ${card.color}40, transparent)` }} />
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/* ─── NodeLibrary ─── */
-function NodeLibrary() {
-  const sectionRef = useRef(null)
-  const headRef = useRef(null)
-  const gridRef = useRef(null)
-
-  useEffect(() => {
-    if (headRef.current) gsap.set(headRef.current, { opacity: 0, y: 40 })
-  }, [])
-
-  const animateHead = useCallback((el, reverse) => {
-    if (reverse) gsap.to(el, { opacity: 0, y: 40, duration: 0.4, ease: 'power2.in' })
-    else gsap.to(el, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' })
-  }, [])
-  const animateGrid = useCallback((el, reverse) => {
-    const items = el.querySelectorAll('.node-item')
-    if (reverse) gsap.to(items, { opacity: 0, y: 30, scale: 0.95, duration: 0.3, stagger: 0.05, ease: 'power2.in' })
-    else gsap.fromTo(items, { opacity: 0, y: 30, scale: 0.95 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, stagger: 0.1, ease: 'power3.out' })
-  }, [])
-
-  useScrollReveal(headRef, animateHead)
-  useScrollReveal(gridRef, animateGrid)
-
-  const nodeTypes = [
-    { label: 'AI Nodes', count: '12+', color: '#8b5cf6', Icon: Cpu, desc: 'GPT, Llama, Claude, embeddings, classifiers' },
-    { label: 'Office Tools', count: '18+', color: '#f59e0b', Icon: Layers, desc: 'Email, Sheets, Docs, Calendar, Drive' },
-    { label: 'Data Processing', count: '10+', color: '#0ea5e9', Icon: Database, desc: 'Transform, filter, aggregate, join data' },
-    { label: 'Logic Control', count: '8+', color: '#10b981', Icon: GitBranch, desc: 'If/else, loops, switches, merge, split' },
-    { label: 'Utility Nodes', count: '14+', color: '#f43f5e', Icon: Wrench, desc: 'HTTP, webhooks, delay, variables, code' },
-  ]
-
-  return (
-    <section ref={sectionRef} className="relative py-28 px-5 overflow-hidden"
-      >
-      <div className="relative z-10 max-w-6xl mx-auto">
-        <div ref={headRef} className="text-center mb-16" >
-          <span className="text-xs font-bold tracking-[0.3em] text-sky-400/70 uppercase mb-4 block">Node Library</span>
-          <h2 className="text-4xl md:text-5xl font-black text-white mb-4">60+ nodes, zero limits</h2>
-          <p className="text-white/40 text-lg max-w-xl mx-auto">Every node you need to automate any office workflow, out of the box.</p>
-        </div>
-        <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {nodeTypes.map((node) => (
-            <div key={node.label} className={`node-item ${glass} rounded-2xl p-6 flex flex-col items-center text-center cursor-default`}
-              
-              onMouseEnter={(e) => gsap.to(e.currentTarget, { y: -6, duration: 0.3, ease: 'power2.out' })}
-              onMouseLeave={(e) => gsap.to(e.currentTarget, { y: 0, duration: 0.5, ease: 'elastic.out(1,0.5)' })}>
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
-                style={{ background: `${node.color}15`, border: `1px solid ${node.color}30` }}>
-                <node.Icon size={22} color={node.color} />
-              </div>
-              <div className="text-2xl font-black mb-1" style={{ color: node.color }}>{node.count}</div>
-              <div className="text-white font-bold text-sm mb-2">{node.label}</div>
-              <div className="text-white/35 text-xs leading-relaxed">{node.desc}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/* ─── LiveCanvasMockup — animated nodes with flowing connections ─── */
+/* ─── LiveCanvasMockup ─── */
 function LiveCanvasMockup() {
   const svgRef = useRef(null)
-
-  // Node definitions: id, label, tag, x, y, color, dot
   const nodes = [
     { id: 'trigger',  label: 'Email Trigger',    tag: 'TRIGGER', x: 60,  y: 80,  color: '#3b82f6', dot: '#60a5fa' },
     { id: 'read',     label: 'Read Email',        tag: 'EMAIL',   x: 60,  y: 190, color: '#8b5cf6', dot: '#a78bfa' },
@@ -704,8 +218,6 @@ function LiveCanvasMockup() {
     { id: 'send',     label: 'Send Email',        tag: 'ACTION',  x: 620, y: 190, color: '#f59e0b', dot: '#fcd34d' },
     { id: 'output',   label: 'Output',            tag: 'OUT',     x: 620, y: 300, color: '#8b5cf6', dot: '#c084fc' },
   ]
-
-  // Edge definitions: from node id → to node id, with color
   const edges = [
     { from: 'trigger', to: 'ai',       color: '#60a5fa' },
     { from: 'read',    to: 'ai',       color: '#a78bfa' },
@@ -714,165 +226,57 @@ function LiveCanvasMockup() {
     { from: 'ai',      to: 'send',     color: '#34d399' },
     { from: 'filter',  to: 'send',     color: '#fb923c' },
     { from: 'filter',  to: 'output',   color: '#fb923c' },
-    { from: 'template','to': 'send',   color: '#6ee7b7' },
+    { from: 'template', to: 'send',    color: '#6ee7b7' },
   ]
-
   const NW = 155, NH = 44, NR = 10
   const SVG_W = 860, SVG_H = 400
-
-  // Get node center-right port (output)
   const portR = (n) => ({ x: n.x + NW, y: n.y + NH / 2 })
-  // Get node center-left port (input)
   const portL = (n) => ({ x: n.x, y: n.y + NH / 2 })
-
   const getNodeById = (id) => nodes.find(n => n.id === id)
-
-  // Build bezier path between two nodes
   const edgePath = (from, to) => {
     const s = portR(from), e = portL(to)
     const cx = (s.x + e.x) / 2
     return `M ${s.x} ${s.y} C ${cx} ${s.y}, ${cx} ${e.y}, ${e.x} ${e.y}`
   }
-
   useEffect(() => {
     const svg = svgRef.current
     if (!svg) return
     const tweens = []
-
-    // Animate each particle along its edge path
-    const particles = svg.querySelectorAll('.flow-particle')
-    particles.forEach((p, i) => {
-      const delay = (i * 0.55) % 3.5
-      const dur = 1.8 + (i % 3) * 0.4
-      tweens.push(
-        gsap.fromTo(p,
-          { opacity: 0 },
-          {
-            opacity: 1,
-            motionPath: { path: p.getAttribute('data-path'), align: p.getAttribute('data-path'), autoRotate: false },
-            duration: dur,
-            delay,
-            repeat: -1,
-            ease: 'none',
-            onRepeat: () => gsap.set(p, { opacity: 0 }),
-            onStart: () => gsap.to(p, { opacity: 1, duration: 0.15 }),
-          }
-        )
-      )
-    })
-
-    // Pulse dots on nodes
     const dots = svg.querySelectorAll('.node-dot')
     dots.forEach((d, i) => {
-      tweens.push(gsap.to(d, {
-        opacity: 0.3, duration: 0.9 + (i % 4) * 0.3,
-        repeat: -1, yoyo: true, ease: 'sine.inOut', delay: i * 0.2,
-      }))
+      tweens.push(gsap.to(d, { opacity: 0.3, duration: 0.9 + (i % 4) * 0.3, repeat: -1, yoyo: true, ease: 'sine.inOut', delay: i * 0.2 }))
     })
-
     return () => tweens.forEach(t => t.kill())
   }, [])
-
   return (
-    <div className="w-full overflow-hidden rounded-2xl" style={{
-      background: 'radial-gradient(ellipse at 40% 50%, rgba(139,92,246,0.06) 0%, transparent 60%)',
-      backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.035) 1px, transparent 1px)',
+    <div className="w-full overflow-hidden rounded-[14px]" style={{
+      backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px)',
       backgroundSize: '28px 28px',
     }}>
-      <style>{`
-        @keyframes dash-flow { to { stroke-dashoffset: -20; } }
-        .edge-track { animation: dash-flow 1.8s linear infinite; }
-      `}</style>
-      <svg ref={svgRef} viewBox={`0 0 ${SVG_W} ${SVG_H}`} width="100%"
-        style={{ display: 'block', overflow: 'visible' }}>
+      <style>{`@keyframes dash-flow { to { stroke-dashoffset: -20; } } .edge-track { animation: dash-flow 1.8s linear infinite; }`}</style>
+      <svg ref={svgRef} viewBox={`0 0 ${SVG_W} ${SVG_H}`} width="100%" style={{ display: 'block', overflow: 'visible' }}>
         <defs>
-          {edges.map((e, i) => {
-            const fn = getNodeById(e.from), tn = getNodeById(e.to)
-            if (!fn || !tn) return null
-            return (
-              <path key={`def-${i}`} id={`ep-${i}`} d={edgePath(fn, tn)} fill="none" />
-            )
-          })}
-          {nodes.map(n => (
-            <linearGradient key={`ng-${n.id}`} id={`ng-${n.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor={n.color} stopOpacity="0.18" />
-              <stop offset="100%" stopColor={n.color} stopOpacity="0.06" />
-            </linearGradient>
-          ))}
-          <filter id="lc-glow" x="-40%" y="-40%" width="180%" height="180%">
-            <feGaussianBlur stdDeviation="3" result="b" />
-            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
+          {edges.map((e, i) => { const fn = getNodeById(e.from), tn = getNodeById(e.to); if (!fn || !tn) return null; return <path key={`def-${i}`} id={`ep-${i}`} d={edgePath(fn, tn)} fill="none" /> })}
+          {nodes.map(n => (<linearGradient key={`ng-${n.id}`} id={`ng-${n.id}`} x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor={n.color} stopOpacity="0.18" /><stop offset="100%" stopColor={n.color} stopOpacity="0.06" /></linearGradient>))}
+          <filter id="lc-glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
         </defs>
-
-        {/* Edge tracks (dashed background) */}
-        {edges.map((e, i) => {
-          const fn = getNodeById(e.from), tn = getNodeById(e.to)
-          if (!fn || !tn) return null
-          return (
-            <path key={`track-${i}`} d={edgePath(fn, tn)} fill="none"
-              stroke={e.color} strokeWidth="1.5" strokeOpacity="0.12"
-              strokeDasharray="6 5" className="edge-track"
-              style={{ animationDelay: `${i * 0.3}s` }} />
-          )
-        })}
-
-        {/* Glowing edge lines */}
-        {edges.map((e, i) => {
-          const fn = getNodeById(e.from), tn = getNodeById(e.to)
-          if (!fn || !tn) return null
-          return (
-            <path key={`glow-${i}`} d={edgePath(fn, tn)} fill="none"
-              stroke={e.color} strokeWidth="1" strokeOpacity="0.08" />
-          )
-        })}
-
-        {/* Flow particles along edges */}
-        {edges.map((e, i) => {
-          const fn = getNodeById(e.from), tn = getNodeById(e.to)
-          if (!fn || !tn) return null
-          const path = edgePath(fn, tn)
-          return (
-            <circle key={`particle-${i}`} r="4" fill={e.color}
-              className="flow-particle" data-path={path}
-              filter="url(#lc-glow)" opacity="0">
-              <animateMotion dur={`${1.8 + (i % 3) * 0.4}s`} repeatCount="indefinite"
-                begin={`${(i * 0.55) % 3.5}s`}>
-                <mpath href={`#ep-${i}`} />
-              </animateMotion>
-            </circle>
-          )
-        })}
-
-        {/* Nodes */}
+        {edges.map((e, i) => { const fn = getNodeById(e.from), tn = getNodeById(e.to); if (!fn || !tn) return null; return <path key={`track-${i}`} d={edgePath(fn, tn)} fill="none" stroke={e.color} strokeWidth="1.5" strokeOpacity="0.12" strokeDasharray="6 5" className="edge-track" style={{ animationDelay: `${i * 0.3}s` }} /> })}
+        {edges.map((e, i) => { const fn = getNodeById(e.from), tn = getNodeById(e.to); if (!fn || !tn) return null; return (
+          <circle key={`particle-${i}`} r="4" fill={e.color} filter="url(#lc-glow)" opacity="0">
+            <animateMotion dur={`${1.8 + (i % 3) * 0.4}s`} repeatCount="indefinite" begin={`${(i * 0.55) % 3.5}s`}><mpath href={`#ep-${i}`} /></animateMotion>
+          </circle>
+        )})}
         {nodes.map((n) => (
           <g key={n.id}>
-            {/* Shadow */}
-            <rect x={n.x + 3} y={n.y + 4} width={NW} height={NH} rx={NR}
-              fill={n.color} opacity="0.08" />
-            {/* Body */}
-            <rect x={n.x} y={n.y} width={NW} height={NH} rx={NR}
-              fill={`url(#ng-${n.id})`} stroke={n.color} strokeWidth="0.8" strokeOpacity="0.4" />
-            {/* Left port dot */}
-            <circle className="node-dot" cx={n.x} cy={n.y + NH / 2} r="5"
-              fill={n.dot} filter="url(#lc-glow)" />
-            <circle cx={n.x} cy={n.y + NH / 2} r="9"
-              fill="none" stroke={n.dot} strokeWidth="1" strokeOpacity="0.2" />
-            {/* Right port dot */}
-            <circle className="node-dot" cx={n.x + NW} cy={n.y + NH / 2} r="5"
-              fill={n.dot} filter="url(#lc-glow)" />
-            <circle cx={n.x + NW} cy={n.y + NH / 2} r="9"
-              fill="none" stroke={n.dot} strokeWidth="1" strokeOpacity="0.2" />
-            {/* Label */}
-            <text x={n.x + 18} y={n.y + NH / 2 + 5}
-              fill="rgba(255,255,255,0.88)" fontSize="12" fontWeight="600"
-              fontFamily="Inter, system-ui, sans-serif">{n.label}</text>
-            {/* Tag badge */}
-            <rect x={n.x + NW - 44} y={n.y + 9} width={38} height={14} rx={7}
-              fill={n.color} opacity="0.22" />
-            <text x={n.x + NW - 25} y={n.y + 19.5} textAnchor="middle"
-              fill={n.dot} fontSize="7" fontWeight="700" fontFamily="monospace"
-              style={{ letterSpacing: '0.06em' }}>{n.tag}</text>
+            <rect x={n.x + 3} y={n.y + 4} width={NW} height={NH} rx={NR} fill={n.color} opacity="0.08" />
+            <rect x={n.x} y={n.y} width={NW} height={NH} rx={NR} fill={`url(#ng-${n.id})`} stroke={n.color} strokeWidth="0.8" strokeOpacity="0.4" />
+            <circle className="node-dot" cx={n.x} cy={n.y + NH / 2} r="5" fill={n.dot} filter="url(#lc-glow)" />
+            <circle cx={n.x} cy={n.y + NH / 2} r="9" fill="none" stroke={n.dot} strokeWidth="1" strokeOpacity="0.2" />
+            <circle className="node-dot" cx={n.x + NW} cy={n.y + NH / 2} r="5" fill={n.dot} filter="url(#lc-glow)" />
+            <circle cx={n.x + NW} cy={n.y + NH / 2} r="9" fill="none" stroke={n.dot} strokeWidth="1" strokeOpacity="0.2" />
+            <text x={n.x + 18} y={n.y + NH / 2 + 5} fill="rgba(255,255,255,0.88)" fontSize="12" fontWeight="600" fontFamily="Inter, system-ui, sans-serif">{n.label}</text>
+            <rect x={n.x + NW - 44} y={n.y + 9} width={38} height={14} rx={7} fill={n.color} opacity="0.22" />
+            <text x={n.x + NW - 25} y={n.y + 19.5} textAnchor="middle" fill={n.dot} fontSize="7" fontWeight="700" fontFamily="monospace" style={{ letterSpacing: '0.06em' }}>{n.tag}</text>
           </g>
         ))}
       </svg>
@@ -880,50 +284,133 @@ function LiveCanvasMockup() {
   )
 }
 
-/* ─── DashboardMockup ─── */
-function DashboardMockup() {
-  const sectionRef = useRef(null)
-  const mockRef = useRef(null)
+/* ════════════════════════════════════════════════════════════════════
+   EDITORIAL BROADSHEET SECTIONS — DESIGN.md layout on dark canvas
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ─── Navbar — minimal top bar per DESIGN.md ─── */
+function Navbar({ onEnter, onNavigateToDocs }) {
+  return (
+    <div className="sticky top-0 z-50 w-full flex justify-between items-center px-6 md:px-[50px] py-[18px]"
+      style={{ background: 'rgba(11,11,14,0.85)', backdropFilter: 'blur(12px)', borderBottom: `1px solid ${tokens.mist}` }}>
+      {/* Wordmark — "NOM" ink + "ADS" orange, per DESIGN.md logo split */}
+      <span className="text-[14px] tracking-[0.01em] select-none" style={{ fontWeight: 550, fontFamily: 'Inter, system-ui, sans-serif' }}>
+        <span style={{ color: tokens.ink }}>NOM</span><span style={{ color: tokens.accent }}>ADS</span>
+      </span>
+      <div className="flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-7">
+          {['Canvas', 'Nodes', 'Templates', 'Pricing'].map(l => (
+            <a key={l} href="#" className="transition-colors duration-300"
+              style={{ color: tokens.sage, fontSize: 14, fontWeight: 350, fontFamily: 'Inter, system-ui, sans-serif' }}
+              onMouseEnter={e => e.target.style.color = tokens.ink}
+              onMouseLeave={e => e.target.style.color = tokens.sage}>{l}</a>
+          ))}
+          <button onClick={onNavigateToDocs} className="transition-colors duration-300"
+            style={{ color: tokens.sage, fontSize: 14, fontWeight: 350, fontFamily: 'Inter, system-ui, sans-serif', background: 'none', border: 'none', cursor: 'pointer' }}
+            onMouseEnter={e => e.target.style.color = tokens.ink}
+            onMouseLeave={e => e.target.style.color = tokens.sage}>Docs</button>
+        </div>
+        {/* Menu + mark icon — per DESIGN.md nav */}
+        <div className="flex items-center gap-2 cursor-pointer group" onClick={onEnter}>
+          <span className="transition-colors duration-300 text-[14px]"
+            style={{ color: tokens.sage, fontWeight: 350, fontFamily: 'Inter, system-ui, sans-serif' }}
+            onMouseEnter={e => e.target.style.color = tokens.ink}
+            onMouseLeave={e => e.target.style.color = tokens.sage}>Menu</span>
+          <span className="text-[14px] font-bold tracking-[0.2em]" style={{ color: tokens.accent }}>||</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Hero — Display headline at 120–140px, asymmetric layout ─── */
+function Hero({ onEnter, onNavigateToDocs = () => {} }) {
+  const headlineRef = useRef(null)
+  const subRef = useRef(null)
+  const ctaRef = useRef(null)
+  const circuitRef = useRef(null)
+  const tagRef = useRef(null)
 
   useEffect(() => {
-    if (mockRef.current) gsap.set(mockRef.current, { opacity: 0, y: 50, scale: 0.97 })
-  }, [])
+    gsap.set([headlineRef.current, subRef.current, ctaRef.current, circuitRef.current, tagRef.current], { opacity: 0 })
+    gsap.set(headlineRef.current, { y: 80 })
+    gsap.set(subRef.current, { y: 30 })
+    gsap.set(ctaRef.current, { y: 20 })
+    gsap.set(circuitRef.current, { y: 50 })
+    gsap.set(tagRef.current, { y: 10 })
 
-  const animateMock = useCallback((el, reverse) => {
-    if (reverse) gsap.to(el, { opacity: 0, y: 50, scale: 0.97, duration: 0.4, ease: 'power2.in' })
-    else gsap.to(el, { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: 'power3.out' })
+    const tl = gsap.timeline({ defaults: { ease: 'power3.out' }, delay: 0.2 })
+    tl.to(tagRef.current, { opacity: 1, y: 0, duration: 0.6 })
+      .to(headlineRef.current, { opacity: 1, y: 0, duration: 1.1 }, '-=0.3')
+      .to(subRef.current, { opacity: 1, y: 0, duration: 0.7 }, '-=0.6')
+      .to(ctaRef.current, { opacity: 1, y: 0, duration: 0.6 }, '-=0.4')
+      .to(circuitRef.current, { opacity: 1, y: 0, duration: 1.0 }, '-=0.7')
+    return () => tl.kill()
   }, [])
-
-  useScrollReveal(mockRef, animateMock)
 
   return (
-    <section ref={sectionRef} className="relative py-28 px-5 overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[500px] rounded-full bg-purple-900/8 blur-[120px]" />
-      </div>
-      <div className="relative z-10 max-w-6xl mx-auto">
-        <div className="text-center mb-16">
-          <span className="text-xs font-bold tracking-[0.3em] text-purple-400/70 uppercase mb-4 block">Visual Canvas</span>
-          <h2 className="text-4xl md:text-5xl font-black text-white mb-4">Nodes that talk to each other</h2>
-          <p className="text-white/40 text-lg max-w-xl mx-auto">Drag, connect, and watch data flow between nodes in real time — no code needed.</p>
+    <section className="relative px-6 md:px-[50px] pt-[100px] md:pt-[130px] pb-[80px] overflow-hidden">
+      {/* Faint radial glow — kept minimal per DESIGN.md */}
+      <div className="absolute top-0 right-0 w-[800px] h-[700px] rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(249,115,22,0.05) 0%, transparent 65%)' }} />
+
+      <div className="max-w-[1440px] mx-auto relative z-10">
+        {/* Edition tag — caption size */}
+        <div ref={tagRef} className="flex items-center gap-3 mb-10">
+          <AccentTick />
+          <span className="font-mono text-[11px] tracking-[0.25em] uppercase" style={{ color: tokens.accent, fontWeight: 700 }}>
+            No-Code Workflow Automation
+          </span>
         </div>
-        <div ref={mockRef} className={`${glass} rounded-3xl overflow-hidden`}>
-          {/* Titlebar */}
-          <div className="flex items-center gap-2 px-5 py-3 border-b border-white/5">
-            <div className="w-3 h-3 rounded-full bg-red-500/60" />
-            <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-            <div className="w-3 h-3 rounded-full bg-green-500/60" />
-            <span className="ml-3 text-white/30 text-xs font-mono">nomads — workflow canvas</span>
-            <div className="ml-auto flex items-center gap-2">
-              <span className="text-[10px] text-green-400/70 font-mono flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" style={{ boxShadow: '0 0 4px #4ade80' }} />
-                Running
-              </span>
+
+        {/* Broadsheet display headline — 120–140px, line-height 0.90, tracking tight */}
+        <h1 ref={headlineRef}
+          className="font-editorial leading-[0.90] text-[80px] sm:text-[100px] md:text-[120px] lg:text-[140px] mb-0 max-w-[1100px]"
+          style={{ letterSpacing: '-0.02em', color: tokens.ink, lineHeight: 0.90 }}>
+          No-Code{' '}
+          <span className="font-mondwest italic"
+            style={{ background: 'linear-gradient(90deg, #fcd34d, #f97316, #ea580c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Workflow
+          </span>
+          <br />
+          Automation.
+        </h1>
+
+        {/* Asymmetric split — body left narrow, circuit right wide — per DESIGN.md section layout */}
+        <div className="flex flex-col lg:flex-row gap-16 lg:gap-[80px] items-start mt-[80px]">
+          {/* Left column — text block, 340px wide */}
+          <div className="w-full lg:w-[340px] flex-shrink-0 flex flex-col items-start gap-6">
+            <p ref={subRef} className="font-sans text-[18px] leading-[1.5] max-w-[320px]"
+              style={{ color: tokens.inkMuted, fontWeight: 350, fontFamily: 'Inter, system-ui, sans-serif' }}>
+              Streamline office tasks with a visual, artistic approach. Build powerful automations without writing a single line of code.
+            </p>
+            <div ref={ctaRef} className="flex flex-col items-start gap-4">
+              <MagneticBtn onClick={onEnter}
+                className="text-[14px] px-[50px] py-[20px] rounded-[10px] flex items-center gap-3 transition-all duration-200 cursor-pointer"
+                style={{
+                  background: tokens.accent,
+                  color: '#0B0B0E',
+                  fontWeight: 550,
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                  letterSpacing: '0.01em',
+                  boxShadow: tokens.accentGlow,
+                  border: 'none',
+                }}>
+                START BUILDING <ArrowRight size={16} />
+              </MagneticBtn>
+              {/* Ghost link per DESIGN.md */}
+              <button onClick={onNavigateToDocs} className="text-[14px] transition-colors duration-300"
+                style={{ color: tokens.sage, fontWeight: 350, fontFamily: 'Inter, system-ui, sans-serif', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+                View documentation →
+              </button>
             </div>
           </div>
-          {/* Canvas */}
-          <div className="p-6">
-            <LiveCanvasMockup />
+
+          {/* Right column — circuit animation as editorial image tile */}
+          <div ref={circuitRef} className="flex-1 w-full min-w-0">
+            <div className="rounded-[14px] overflow-hidden">
+              <NodeCircuitAnimation />
+            </div>
           </div>
         </div>
       </div>
@@ -931,104 +418,382 @@ function DashboardMockup() {
   )
 }
 
-/* ─── BottomCTA ─── */
-function BottomCTA({ onEnter }) {
-  const sectionRef = useRef(null)
-  const cardRef = useRef(null)
-  const glowRef = useRef(null)
+/* ─── HowItWorks — editorial numbered steps, DESIGN.md typography scale ─── */
+function HowItWorks() {
+  const headRef = useRef(null)
+  const stepsRef = useRef(null)
 
-  useEffect(() => {
-    if (cardRef.current) gsap.set(cardRef.current, { opacity: 0, y: 40, scale: 0.97 })
+  useEffect(() => { if (headRef.current) gsap.set(headRef.current, { opacity: 0, y: 50 }) }, [])
+  const animateHead = useCallback((el, reverse) => {
+    if (reverse) gsap.to(el, { opacity: 0, y: 50, duration: 0.4, ease: 'power2.in' })
+    else gsap.to(el, { opacity: 1, y: 0, duration: 0.9, ease: 'power3.out' })
   }, [])
-
-  const animateCard = useCallback((el, reverse) => {
-    if (reverse) gsap.to(el, { opacity: 0, y: 40, scale: 0.97, duration: 0.4, ease: 'power2.in' })
-    else gsap.to(el, { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: 'power3.out' })
+  const animateSteps = useCallback((el, reverse) => {
+    const items = el.querySelectorAll('.hiw-step')
+    if (reverse) gsap.to(items, { opacity: 0, y: 40, duration: 0.35, stagger: 0.08, ease: 'power2.in' })
+    else gsap.fromTo(items, { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, stagger: 0.22, ease: 'power3.out' })
   }, [])
+  useScrollReveal(headRef, animateHead)
+  useScrollReveal(stepsRef, animateSteps)
 
-  useScrollReveal(cardRef, animateCard)
-
-  useEffect(() => {
-    const glow = glowRef.current
-    if (!glow) return
-    gsap.to(glow, {
-      y: -60,
-      ease: 'none',
-      scrollTrigger: { trigger: sectionRef.current, scroller: SCROLLER, start: 'top bottom', end: 'bottom top', scrub: 2 }
-    })
-    return () => {
-      ScrollTrigger.getAll().forEach(t => {
-        if (t.vars.trigger === sectionRef.current) t.kill()
-      })
-    }
-  }, [])
+  const steps = [
+    { num: '01', title: 'Connect Apps', desc: 'Link your favorite office tools — email, spreadsheets, calendars — in seconds with our pre-built connectors.' },
+    { num: '02', title: 'Build Logic', desc: 'Drag, drop, and connect nodes on a visual canvas. Add AI, conditions, loops — no code required.' },
+    { num: '03', title: 'Automate', desc: 'Activate your workflow and watch tasks complete themselves. Monitor runs in real-time from your dashboard.' },
+  ]
 
   return (
-    <section ref={sectionRef} className="relative py-28 px-5 overflow-hidden"
-      >
-      <div ref={glowRef} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(234,97,19,0.15) 0%, transparent 65%)' }} />
-      <div className="relative z-10 max-w-4xl mx-auto">
-        <div ref={cardRef} className={`${glass} rounded-3xl p-12 md:p-16 text-center`} >
-          <h2 className="text-4xl md:text-6xl font-black text-white mb-6 leading-tight">
-            Build your first{' '}
-            <span className="bg-gradient-to-r from-amber-300 via-orange-400 to-orange-500 bg-clip-text text-transparent"
-              style={{ WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              workflow.
-            </span>
+    <section className="relative py-[120px] px-6 md:px-[50px]" style={{ borderTop: `1px solid ${tokens.mist}` }}>
+      <div className="max-w-[1440px] mx-auto">
+        <div ref={headRef}>
+          <AccentTick className="mb-10" />
+          {/* DESIGN.md: heading-lg 96px, line-height 1.1, tracking -1.92px */}
+          <h2 className="font-editorial mb-[100px] max-w-[800px]"
+            style={{ fontSize: 'clamp(60px, 7vw, 96px)', lineHeight: 1.0, letterSpacing: '-1.92px', color: tokens.ink }}>
+            Three steps to<br />
+            <span style={{ color: tokens.inkFaint, WebkitTextStroke: `1px ${tokens.sage}` }}>automation.</span>
           </h2>
-          <p className="text-white/45 text-lg md:text-xl mb-10 max-w-xl mx-auto leading-relaxed">
-            Join thousands of teams automating their office work with NOMADS. No credit card required.
-          </p>
-          <MagneticBtn onClick={onEnter}
-            className={`${orangeGrad} inline-flex items-center gap-2 text-sm px-10 py-4 rounded-full`}>
-            Start Building for Free <ArrowRight size={16} />
-          </MagneticBtn>
+        </div>
+
+        {/* Steps — big PP Mondwest number + body text, DESIGN.md portfolio card rhythm */}
+        <div ref={stepsRef} className="flex flex-col gap-[70px]">
+          {steps.map((step, i) => (
+            <div key={step.num} className="hiw-step flex flex-col md:flex-row items-start gap-[30px] md:gap-[80px] group"
+              style={{ borderBottom: `1px solid ${tokens.mist}`, paddingBottom: i < steps.length - 1 ? 70 : 0 }}>
+              {/* Large number — Mondwest 140px, near-invisible until hover */}
+              <div className="font-mondwest leading-[0.85] w-[120px] md:w-[180px] flex-shrink-0 select-none transition-colors duration-500"
+                style={{ fontSize: 'clamp(80px, 10vw, 140px)', color: 'rgba(240,240,238,0.05)', letterSpacing: '-0.04em' }}>
+                {step.num}
+              </div>
+              <div className="max-w-[520px] pt-2 md:pt-6">
+                {/* Tag line */}
+                <span className="font-mono text-[11px] tracking-[0.25em] uppercase block mb-4"
+                  style={{ color: tokens.accent, fontWeight: 700, fontFamily: 'monospace' }}>
+                  Step {step.num}
+                </span>
+                <h3 className="font-sans mb-4" style={{ fontSize: 22, color: tokens.ink, fontWeight: 550, fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  {step.title}
+                </h3>
+                <p className="font-sans text-[16px] leading-[1.5]" style={{ color: tokens.inkMuted, fontWeight: 350, fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  {step.desc}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </section>
   )
 }
 
-/* ─── Footer ─── */
+/* ─── FeaturesSection — no card borders, type defines hierarchy ─── */
+function FeaturesSection() {
+  const headRef = useRef(null)
+  const gridRef = useRef(null)
+
+  useEffect(() => { if (headRef.current) gsap.set(headRef.current, { opacity: 0, y: 50 }) }, [])
+  const animateHead = useCallback((el, reverse) => {
+    if (reverse) gsap.to(el, { opacity: 0, y: 50, duration: 0.4, ease: 'power2.in' })
+    else gsap.to(el, { opacity: 1, y: 0, duration: 0.9, ease: 'power3.out' })
+  }, [])
+  const animateGrid = useCallback((el, reverse) => {
+    const items = el.querySelectorAll('.feat-item')
+    if (reverse) gsap.to(items, { opacity: 0, y: 30, duration: 0.3, stagger: 0.06, ease: 'power2.in' })
+    else gsap.fromTo(items, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.15, ease: 'power3.out' })
+  }, [])
+  useScrollReveal(headRef, animateHead)
+  useScrollReveal(gridRef, animateGrid)
+
+  const features = [
+    { title: 'Drag & Drop Canvas', desc: 'Build complex workflows visually. Connect nodes with a click, rearrange freely, and see your logic come alive.', tag: '01' },
+    { title: 'AI-Powered Nodes', desc: 'Embed GPT, Llama, and other AI models directly into your workflows. Summarize, classify, generate — all automated.', tag: '02' },
+    { title: 'Real-time Monitoring', desc: 'Watch every workflow run live. Inspect node outputs, catch errors instantly, and replay failed steps.', tag: '03' },
+    { title: 'One-click Deploy', desc: 'Publish your workflow with a single click. Schedule it, trigger via webhook, or run on demand.', tag: '04' },
+  ]
+
+  return (
+    <section className="relative py-[120px] px-6 md:px-[50px]" style={{ borderTop: `1px solid ${tokens.mist}` }}>
+      <div className="max-w-[1440px] mx-auto">
+        {/* Asymmetric: headline left, sub-statement right — DESIGN.md layout */}
+        <div ref={headRef} className="flex flex-col lg:flex-row lg:items-end gap-[60px] mb-[100px]">
+          <div className="flex-1">
+            <AccentTick className="mb-10" />
+            <h2 className="font-editorial max-w-[600px]"
+              style={{ fontSize: 'clamp(60px, 7vw, 96px)', lineHeight: 1.0, letterSpacing: '-1.92px', color: tokens.ink }}>
+              Everything<br />
+              <span style={{ color: tokens.sage }}>you need.</span>
+            </h2>
+          </div>
+          <div className="w-full lg:w-[340px] flex-shrink-0">
+            <p className="font-sans text-[16px] leading-[1.6]" style={{ color: tokens.inkMuted, fontWeight: 350, fontFamily: 'Inter, system-ui, sans-serif' }}>
+              Four capabilities that form the core of every automated workflow you'll build on NOMADS.
+            </p>
+          </div>
+        </div>
+
+        {/* Feature grid — no borders, pure typography hierarchy */}
+        <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-2 gap-y-[70px] gap-x-[80px] max-w-[1000px]">
+          {features.map((feat) => (
+            <div key={feat.title} className="feat-item flex flex-col group">
+              <span className="font-mono text-[11px] tracking-[0.25em] uppercase mb-5 block"
+                style={{ color: tokens.accent, fontWeight: 700, fontFamily: 'monospace' }}>
+                {feat.tag}
+              </span>
+              <h3 className="font-sans mb-4 transition-colors duration-300"
+                style={{ fontSize: 20, color: tokens.ink, fontWeight: 550, fontFamily: 'Inter, system-ui, sans-serif' }}>
+                {feat.title}
+              </h3>
+              <p className="font-sans text-[16px] leading-[1.6]" style={{ color: tokens.inkMuted, fontWeight: 350, fontFamily: 'Inter, system-ui, sans-serif' }}>
+                {feat.desc}
+              </p>
+              {/* Hairline divider — DESIGN.md mist divider */}
+              <div className="mt-8 h-[1px] transition-colors duration-500" style={{ background: tokens.mist }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ─── Visual Canvas Section — editorial asymmetric image + text ─── */
+function VisualCanvasSection() {
+  const mockRef = useRef(null)
+  const textRef = useRef(null)
+
+  useEffect(() => {
+    if (mockRef.current) gsap.set(mockRef.current, { opacity: 0, y: 50, scale: 0.98 })
+    if (textRef.current) gsap.set(textRef.current, { opacity: 0, x: -30 })
+  }, [])
+  const animateMock = useCallback((el, reverse) => {
+    if (reverse) gsap.to(el, { opacity: 0, y: 50, scale: 0.98, duration: 0.4, ease: 'power2.in' })
+    else gsap.to(el, { opacity: 1, y: 0, scale: 1, duration: 0.9, ease: 'power3.out' })
+  }, [])
+  const animateText = useCallback((el, reverse) => {
+    if (reverse) gsap.to(el, { opacity: 0, x: -30, duration: 0.4, ease: 'power2.in' })
+    else gsap.to(el, { opacity: 1, x: 0, duration: 0.8, ease: 'power3.out' })
+  }, [])
+  useScrollReveal(mockRef, animateMock)
+  useScrollReveal(textRef, animateText)
+
+  return (
+    <section className="relative py-[120px] px-6 md:px-[50px]" style={{ borderTop: `1px solid ${tokens.mist}` }}>
+      <div className="max-w-[1440px] mx-auto">
+        {/* Asymmetric: text left narrow, canvas right wide — DESIGN.md editorial layout */}
+        <div className="flex flex-col lg:flex-row gap-[60px] lg:gap-[100px] items-start">
+          <div ref={textRef} className="w-full lg:w-[380px] flex-shrink-0 pt-4">
+            <AccentTick className="mb-10" />
+            <h2 className="font-editorial mb-8"
+              style={{ fontSize: 'clamp(52px, 5.5vw, 72px)', lineHeight: 0.92, letterSpacing: '-1.2px', color: tokens.ink }}>
+              Visual<br />Canvas.
+            </h2>
+            <p className="font-sans text-[18px] leading-[1.5] mb-6 max-w-[340px]"
+              style={{ color: tokens.inkMuted, fontWeight: 350, fontFamily: 'Inter, system-ui, sans-serif' }}>
+              An infinite, zoomable canvas where you design workflows like an artist. Pan, zoom, group nodes, and build with total freedom.
+            </p>
+            {/* Caption pair — DESIGN.md: Times/editorial italic caption */}
+            <p className="font-editorial italic text-[16px] leading-[1.4]" style={{ color: tokens.sage }}>
+              — Drag, connect, and watch data flow between nodes in real time.
+            </p>
+          </div>
+
+          {/* Canvas mockup — acts as editorial image tile, 14px radius, no extra border chrome */}
+          <div ref={mockRef} className="flex-1 w-full min-w-0">
+            <div className="rounded-[14px] overflow-hidden" style={{ border: `1px solid ${tokens.mist}` }}>
+              {/* Window chrome — mimics DESIGN.md image tile with editorial label */}
+              <div className="flex items-center gap-2 px-5 py-3" style={{ borderBottom: `1px solid ${tokens.mist}`, background: 'rgba(0,0,0,0.35)' }}>
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500/50" />
+                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/50" />
+                <div className="w-2.5 h-2.5 rounded-full bg-green-500/50" />
+                <span className="ml-3 font-mono text-[11px]" style={{ color: tokens.sage }}>nomads — workflow canvas</span>
+                <div className="ml-auto flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" style={{ boxShadow: '0 0 4px #4ade80' }} />
+                  <span className="font-mono text-[10px] text-green-400/60">Running</span>
+                </div>
+              </div>
+              <div className="p-5">
+                <LiveCanvasMockup />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ─── NodeLibrarySection — PP Mondwest statement + editorial list ─── */
+function NodeLibrarySection() {
+  const headRef = useRef(null)
+  const gridRef = useRef(null)
+
+  useEffect(() => { if (headRef.current) gsap.set(headRef.current, { opacity: 0, y: 50 }) }, [])
+  const animateHead = useCallback((el, reverse) => {
+    if (reverse) gsap.to(el, { opacity: 0, y: 50, duration: 0.4, ease: 'power2.in' })
+    else gsap.to(el, { opacity: 1, y: 0, duration: 0.9, ease: 'power3.out' })
+  }, [])
+  const animateGrid = useCallback((el, reverse) => {
+    const items = el.querySelectorAll('.node-entry')
+    if (reverse) gsap.to(items, { opacity: 0, y: 25, duration: 0.3, stagger: 0.05, ease: 'power2.in' })
+    else gsap.fromTo(items, { opacity: 0, y: 25 }, { opacity: 1, y: 0, duration: 0.55, stagger: 0.12, ease: 'power3.out' })
+  }, [])
+  useScrollReveal(headRef, animateHead)
+  useScrollReveal(gridRef, animateGrid)
+
+  const categories = [
+    { label: 'AI Nodes',        count: '12+', color: '#8b5cf6', desc: 'GPT, Llama, Claude, embeddings, classifiers' },
+    { label: 'Office Tools',    count: '18+', color: '#f97316', desc: 'Email, Sheets, Docs, Calendar, Drive' },
+    { label: 'Data Processing', count: '10+', color: '#0ea5e9', desc: 'Transform, filter, aggregate, join data' },
+    { label: 'Logic Control',   count: '8+',  color: '#10b981', desc: 'If/else, loops, switches, merge, split' },
+    { label: 'Utility Nodes',   count: '14+', color: '#f43f5e', desc: 'HTTP, webhooks, delay, variables, code' },
+  ]
+
+  return (
+    <section className="relative py-[120px] px-6 md:px-[50px]" style={{ borderTop: `1px solid ${tokens.mist}` }}>
+      <div className="max-w-[1440px] mx-auto">
+        {/* DESIGN.md: PP Mondwest 96px statement headline */}
+        <div ref={headRef}>
+          <AccentTick className="mb-10" />
+          <h2 className="font-mondwest mb-[80px]"
+            style={{ fontSize: 'clamp(60px, 7vw, 96px)', lineHeight: 0.92, letterSpacing: '-0.04em', color: tokens.ink }}>
+            60+ nodes,<br />
+            <span style={{ color: tokens.sage }}>zero limits.</span>
+          </h2>
+        </div>
+
+        {/* Portfolio card style — no border, no shadow, type alone defines hierarchy */}
+        <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-[55px] gap-x-[50px] max-w-[1100px]">
+          {categories.map((cat) => (
+            <div key={cat.label} className="node-entry flex flex-col group cursor-default">
+              {/* Count — Mondwest color accent */}
+              <div className="flex items-baseline gap-3 mb-3">
+                <span className="font-mondwest text-[36px] leading-none" style={{ color: cat.color }}>{cat.count}</span>
+                <span className="font-sans text-[18px] transition-colors duration-300"
+                  style={{ color: tokens.ink, fontWeight: 550, fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  {cat.label}
+                </span>
+              </div>
+              <p className="font-sans text-[14px] leading-[1.5] mb-5"
+                style={{ color: tokens.sage, fontWeight: 350, fontFamily: 'Inter, system-ui, sans-serif' }}>
+                {cat.desc}
+              </p>
+              {/* Hairline bottom divider — mist per DESIGN.md */}
+              <div className="h-[1px] transition-colors duration-500" style={{ background: tokens.mist }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ─── BottomCTA — massive display headline + Voltage CTA ─── */
+function BottomCTA({ onEnter }) {
+  const contentRef = useRef(null)
+
+  useEffect(() => { if (contentRef.current) gsap.set(contentRef.current, { opacity: 0, y: 50 }) }, [])
+  const animateContent = useCallback((el, reverse) => {
+    if (reverse) gsap.to(el, { opacity: 0, y: 50, duration: 0.4, ease: 'power2.in' })
+    else gsap.to(el, { opacity: 1, y: 0, duration: 1.0, ease: 'power3.out' })
+  }, [])
+  useScrollReveal(contentRef, animateContent)
+
+  return (
+    <section className="relative py-[140px] px-6 md:px-[50px] overflow-hidden" style={{ borderTop: `1px solid ${tokens.mist}` }}>
+      {/* Minimal background glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(249,115,22,0.06) 0%, transparent 60%)' }} />
+
+      <div ref={contentRef} className="relative z-10 max-w-[1440px] mx-auto">
+        <AccentTick className="mb-14" />
+        {/* DESIGN.md display scale: 120–140px, line-height 0.90, mixed faces */}
+        <h2 className="font-editorial mb-10 max-w-[960px]"
+          style={{ fontSize: 'clamp(60px, 10vw, 140px)', lineHeight: 0.90, letterSpacing: '-0.02em', color: tokens.ink }}>
+          Build your first{' '}
+          <span className="font-mondwest italic"
+            style={{ background: 'linear-gradient(90deg, #fcd34d, #f97316, #ea580c)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            workflow.
+          </span>
+        </h2>
+        <p className="font-sans text-[18px] md:text-[20px] leading-[1.5] mb-14 max-w-[480px]"
+          style={{ color: tokens.inkMuted, fontWeight: 350, fontFamily: 'Inter, system-ui, sans-serif' }}>
+          Join thousands of teams automating their office work with NOMADS. No credit card required.
+        </p>
+        {/* Voltage CTA button — DESIGN.md primary action */}
+        <MagneticBtn onClick={onEnter}
+          className="text-[14px] px-[50px] py-[20px] rounded-[10px] inline-flex items-center gap-3 transition-all duration-200 cursor-pointer"
+          style={{
+            background: tokens.accent,
+            color: '#0B0B0E',
+            fontWeight: 550,
+            fontFamily: 'Inter, system-ui, sans-serif',
+            letterSpacing: '0.01em',
+            boxShadow: tokens.accentGlow,
+            border: 'none',
+          }}>
+          START BUILDING FOR FREE <ArrowRight size={16} />
+        </MagneticBtn>
+      </div>
+    </section>
+  )
+}
+
+/* ─── Footer — Obsidian panel, minimal links ─── */
 function Footer() {
   return (
-    <footer className="relative py-10 px-5 border-t border-white/5"
-      >
-      <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-6">
-          <span className="text-white font-black text-sm tracking-[0.22em] select-none">NOMADS</span>
-          <div className="flex items-center gap-5">
+    <footer className="relative py-[50px] px-6 md:px-[50px]"
+      style={{ background: tokens.panel, borderTop: `1px solid ${tokens.mist}` }}>
+      <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+          {/* Wordmark — logo split per DESIGN.md */}
+          <span className="text-[14px] select-none" style={{ fontWeight: 550, fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <span style={{ color: tokens.ink }}>NOM</span><span style={{ color: tokens.accent }}>ADS</span>
+          </span>
+          <div className="flex items-center gap-6">
             {['About Us', 'Contact', 'Privacy', 'Terms'].map(link => (
-              <a key={link} href="#" className="text-white/35 hover:text-white/70 text-xs font-medium transition-colors duration-200">{link}</a>
+              <a key={link} href="#" className="text-[14px] transition-colors duration-300"
+                style={{ color: 'rgba(240,240,238,0.20)', fontWeight: 350, fontFamily: 'Inter, system-ui, sans-serif', textDecoration: 'none' }}
+                onMouseEnter={e => e.target.style.color = tokens.sage}
+                onMouseLeave={e => e.target.style.color = 'rgba(240,240,238,0.20)'}>
+                {link}
+              </a>
             ))}
           </div>
         </div>
-        <p className="text-white/25 text-xs">© 2024 NOMADS. All rights reserved.</p>
+        <p className="font-mono text-[11px]" style={{ color: 'rgba(240,240,238,0.12)', letterSpacing: '0.01em' }}>
+          © 2024 NOMADS. All rights reserved.
+        </p>
       </div>
     </footer>
   )
 }
 
+
 /* ─── LandingPage (default export) ─── */
-export default function LandingPage({ onEnter, onNavigateToDocs }) {
+export default function LandingPage({ onEnter, onNavigateToDocs = () => {} }) {
   return (
-    <div className="relative min-h-screen overflow-x-hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="relative min-h-screen overflow-x-hidden"
+      style={{ background: tokens.canvas, fontFamily: 'Inter, system-ui, sans-serif' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        ::selection { background: rgba(245,158,11,0.35); color: #fff; }
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;1,300;1,400&display=swap');
+        .font-editorial { font-family: 'Playfair Display', 'Georgia', serif; font-weight: 300; }
+        .font-mondwest  { font-family: 'Playfair Display', 'Georgia', serif; font-weight: 400; font-style: italic; }
+        .font-sans      { font-family: 'Inter', system-ui, sans-serif; }
+        .font-mono      { font-family: 'JetBrains Mono', 'Fira Mono', monospace; }
+        ::selection { background: rgba(249,115,22,0.35); color: #fff; }
         ::-webkit-scrollbar { width: 3px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(245,158,11,0.5); border-radius: 2px; }
+        ::-webkit-scrollbar-thumb { background: rgba(249,115,22,0.35); border-radius: 2px; }
+        /* Ensure sections breathe — DESIGN.md section gap 80-120px */
+        section { position: relative; }
       `}</style>
       <CursorGlow />
       <Navbar onEnter={onEnter} onNavigateToDocs={onNavigateToDocs} />
-      <Hero onEnter={onEnter} />
+      <Hero onEnter={onEnter} onNavigateToDocs={onNavigateToDocs} />
       <HowItWorks />
-      <FeaturesGrid />
-      <CoreComponents />
-      <NodeLibrary />
-      <DashboardMockup />
+      <FeaturesSection />
+      <VisualCanvasSection />
+      <NodeLibrarySection />
       <BottomCTA onEnter={onEnter} />
       <Footer />
     </div>

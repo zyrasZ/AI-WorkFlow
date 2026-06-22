@@ -9,6 +9,15 @@ export default {
       fontFamily: {
         'sans': ['Inter', 'SF Pro Display', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
         'mono': ['SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'monospace'],
+        'editorial': ['Playfair Display', 'ui-serif', 'Georgia', 'Cambria', 'Times New Roman', 'Times', 'serif'],
+        'mondwest': ['PT Serif', 'ui-serif', 'Georgia', 'Cambria', 'Times New Roman', 'Times', 'serif'],
+      },
+      fontSize: {
+        'heading-sm': ['60px', { lineHeight: '0.9', letterSpacing: '-1.2px' }],
+        'heading': ['72px', { lineHeight: '1.1' }],
+        'heading-lg': ['96px', { lineHeight: '1.1', letterSpacing: '-1.92px' }],
+        'display': ['140px', { lineHeight: '0.9', letterSpacing: '-1.4px' }],
+        'display-lg': ['240px', { lineHeight: '0.9', letterSpacing: '-4.8px' }],
       },
       colors: {
         // Figma Weave Color Palette
