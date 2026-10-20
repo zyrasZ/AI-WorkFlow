@@ -6,12 +6,9 @@ import {
   Folder,
   Grid3x3,
   MessageCircle,
-  ChevronDown,
   Trash2,
-  Settings,
-  LogOut,
+  Workflow,
 } from "lucide-react";
-import { useAuth } from "../../hooks/useAuth";
 import { apiClient } from "../../lib/api";
 import {
   DEFAULT_DEMO_WORKFLOWS,
@@ -386,97 +383,10 @@ const INITIAL_TIME = Date.now();
 export default function ProjectManagement({
   onOpenProject,
   onBack,
-  onLogout,
-  onSettings,
 }) {
-  const { user, loading: authLoading } = useAuth();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-
-  // Get user data from useAuth or fallback to localStorage
-  // This will re-calculate whenever 'user' changes
-  const currentUser =
-    user ||
-    (() => {
-      try {
-        const storedUserData = localStorage.getItem("user_data");
-        if (storedUserData) {
-          return JSON.parse(storedUserData);
-        }
-      } catch (e) {
-        console.error("Failed to parse user_data:", e);
-      }
-      return null;
-    })();
-
-  // Get workspace name from user data
-  const workspaceName =
-    currentUser?.name ||
-    currentUser?.user_metadata?.full_name ||
-    currentUser?.user_metadata?.name ||
-    currentUser?.email?.split("@")[0] ||
-    "My WorkSpace";
-
-  // Get user avatar
-  const userAvatar =
-    currentUser?.avatar_url ||
-    currentUser?.user_metadata?.avatar_url ||
-    currentUser?.user_metadata?.picture ||
-    null;
-
-  // Get user display name
-  const userDisplayName =
-    currentUser?.name ||
-    currentUser?.user_metadata?.full_name ||
-    currentUser?.user_metadata?.name ||
-    currentUser?.email?.split("@")[0] ||
-    "User";
-
-  // Debug: Log user data
-  useEffect(() => {
-    console.log("=== ProjectManagement User Debug ===");
-    console.log("User from useAuth:", user);
-    console.log("Current user (with fallback):", currentUser);
-    console.log("Auth loading:", authLoading);
-    console.log("User email:", currentUser?.email);
-    console.log("User name:", currentUser?.name);
-    console.log("User avatar:", currentUser?.avatar_url);
-    console.log("User metadata:", currentUser?.user_metadata);
-
-    const storedUserData = localStorage.getItem("user_data");
-    console.log("LocalStorage user_data (raw):", storedUserData);
-
-    if (storedUserData) {
-      try {
-        const parsedUser = JSON.parse(storedUserData);
-        console.log("Parsed user data:", parsedUser);
-        console.log("Parsed user email:", parsedUser.email);
-        console.log("Parsed user name:", parsedUser.name);
-        console.log("Parsed user avatar:", parsedUser.avatar_url);
-        console.log("Parsed user metadata:", parsedUser.user_metadata);
-      } catch (e) {
-        console.error("Failed to parse user_data:", e);
-      }
-    }
-
-    console.log(
-      "LocalStorage token:",
-      localStorage.getItem("office_weave_token"),
-    );
-    console.log("Computed values:");
-    console.log("  - workspaceName:", workspaceName);
-    console.log("  - userAvatar:", userAvatar);
-    console.log("  - userDisplayName:", userDisplayName);
-  }, [
-    user,
-    authLoading,
-    currentUser,
-    workspaceName,
-    userAvatar,
-    userDisplayName,
-  ]);
 
   const loadWorkflows = async () => {
     try {
@@ -546,16 +456,6 @@ export default function ProjectManagement({
     }, 0);
     return () => clearTimeout(id);
   }, []);
-
-  // Reload when user changes
-  useEffect(() => {
-    if (user) {
-      const id = setTimeout(() => {
-        loadWorkflows();
-      }, 0);
-      return () => clearTimeout(id);
-    }
-  }, [user]);
 
   const createNewProject = useCallback(async () => {
     try {
@@ -652,369 +552,69 @@ export default function ProjectManagement({
           flexShrink: 0,
         }}
       >
-        {/* User profile */}
+        {/* Workspace Brand Header */}
         <div
           style={{
-            padding: "16px",
+            padding: "18px 20px",
             borderBottom: "1px solid rgba(255,255,255,0.06)",
-            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
           }}
         >
-          <button
-            onClick={() => setUserMenuOpen(!userMenuOpen)}
+          <div
             style={{
-              width: "100%",
-              padding: "12px",
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: "8px",
+              width: "36px",
+              height: "36px",
+              borderRadius: "10px",
+              background: "linear-gradient(135deg, #EA6113, #f59e0b)",
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
-              cursor: "pointer",
-              transition: "background 0.15s",
+              justifyContent: "center",
+              boxShadow: "0 0 16px rgba(234,97,19,0.3)",
+              flexShrink: 0,
             }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = "rgba(255,255,255,0.06)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "rgba(255,255,255,0.04)")
-            }
           >
+            <Workflow size={20} color="#fff" />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
+                fontSize: "14px",
+                fontWeight: 700,
+                color: "#fff",
+                letterSpacing: "-0.01em",
                 display: "flex",
                 alignItems: "center",
-                gap: "12px",
-                flex: 1,
-                minWidth: 0,
+                gap: "6px",
               }}
             >
-              {userAvatar ? (
-                <img
-                  src={userAvatar}
-                  alt={userDisplayName}
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    borderRadius: "8px",
-                    objectFit: "cover",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    flexShrink: 0,
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    borderRadius: "8px",
-                    background: "linear-gradient(135deg, #EA6113, #8b5cf6)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "14px",
-                    fontWeight: 700,
-                    color: "#fff",
-                    flexShrink: 0,
-                  }}
-                >
-                  {workspaceName.charAt(0).toUpperCase()}
-                </div>
-              )}
+              AI Work Flow
               <span
                 style={{
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "#fff",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
+                  fontSize: "9px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  padding: "2px 6px",
+                  background: "rgba(234,97,19,0.2)",
+                  color: "#EA6113",
+                  borderRadius: "4px",
+                  border: "1px solid rgba(234,97,19,0.3)",
                 }}
               >
-                {workspaceName}
+                Demo
               </span>
             </div>
-            <ChevronDown
-              size={14}
+            <div
               style={{
+                fontSize: "11px",
                 color: "rgba(255,255,255,0.4)",
-                transform: userMenuOpen ? "rotate(180deg)" : "rotate(0)",
-                transition: "transform 0.2s",
-                flexShrink: 0,
-                marginLeft: "8px",
+                marginTop: "2px",
               }}
-            />
-          </button>
-
-          {/* User Dropdown Menu */}
-          <AnimatePresence>
-            {userMenuOpen && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                style={{
-                  position: "absolute",
-                  left: "16px",
-                  right: "16px",
-                  top: "72px",
-                  zIndex: 100,
-                  background: "rgba(20,20,22,0.98)",
-                  backdropFilter: "blur(20px)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: "12px",
-                  padding: "12px",
-                  boxShadow: "0 12px 32px rgba(0,0,0,0.5)",
-                }}
-              >
-                {/* User Info */}
-                <div
-                  style={{
-                    padding: "12px",
-                    marginBottom: "8px",
-                    borderBottom: "1px solid rgba(255,255,255,0.06)",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                      marginBottom: "12px",
-                    }}
-                  >
-                    {userAvatar ? (
-                      <img
-                        src={userAvatar}
-                        alt={userDisplayName}
-                        style={{
-                          width: "48px",
-                          height: "48px",
-                          borderRadius: "10px",
-                          objectFit: "cover",
-                          border: "1px solid rgba(255,255,255,0.15)",
-                          flexShrink: 0,
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          width: "48px",
-                          height: "48px",
-                          borderRadius: "10px",
-                          background:
-                            "linear-gradient(135deg, #f59e0b, #ef4444)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "18px",
-                          fontWeight: 700,
-                          color: "#fff",
-                          flexShrink: 0,
-                        }}
-                      >
-                        {(currentUser?.email?.charAt(0) || "U").toUpperCase()}
-                      </div>
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: "14px",
-                          fontWeight: 600,
-                          color: "#fff",
-                          marginBottom: "4px",
-                        }}
-                      >
-                        {userDisplayName}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "11px",
-                          color: "rgba(255,255,255,0.5)",
-                          wordBreak: "break-all",
-                          lineHeight: "1.4",
-                        }}
-                      >
-                        {currentUser?.email || "No email"}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Credits */}
-                  <div style={{ marginBottom: "12px" }}>
-                    <div
-                      style={{
-                        fontSize: "11px",
-                        color: "rgba(255,255,255,0.4)",
-                        marginBottom: "6px",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Credits
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "6px",
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: "16px",
-                            fontWeight: 700,
-                            color: "#fff",
-                          }}
-                        >
-                          ✦ 150
-                        </span>
-                      </div>
-                      <button
-                        style={{
-                          fontSize: "11px",
-                          color: "#EA6113",
-                          background: "transparent",
-                          border: "none",
-                          cursor: "pointer",
-                          fontWeight: 600,
-                          textDecoration: "underline",
-                          padding: 0,
-                        }}
-                      >
-                        Upgrade for more
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Plan */}
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "11px",
-                        color: "rgba(255,255,255,0.4)",
-                        marginBottom: "6px",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Plan
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: "13px",
-                          color: "#fff",
-                          fontWeight: 500,
-                        }}
-                      >
-                        Free
-                      </span>
-                      <button
-                        style={{
-                          fontSize: "11px",
-                          color: "#EA6113",
-                          background: "transparent",
-                          border: "none",
-                          cursor: "pointer",
-                          fontWeight: 600,
-                          textDecoration: "underline",
-                          padding: 0,
-                        }}
-                      >
-                        Upgrade
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Menu Items */}
-                <div style={{ padding: "4px" }}>
-                  <button
-                    onClick={() => {
-                      setUserMenuOpen(false);
-                      onSettings();
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      background: "transparent",
-                      border: "none",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                      fontSize: "13px",
-                      color: "rgba(255,255,255,0.8)",
-                      textAlign: "left",
-                      transition: "background 0.15s",
-                      fontWeight: 500,
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background =
-                        "rgba(255,255,255,0.06)")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "transparent")
-                    }
-                  >
-                    <Settings
-                      size={16}
-                      style={{ color: "rgba(255,255,255,0.6)" }}
-                    />
-                    Settings
-                  </button>
-
-                  <button
-                    onClick={onLogout}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      background: "transparent",
-                      border: "none",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                      fontSize: "13px",
-                      color: "rgba(255,255,255,0.8)",
-                      textAlign: "left",
-                      transition: "background 0.15s",
-                      fontWeight: 500,
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background =
-                        "rgba(255,255,255,0.06)")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "transparent")
-                    }
-                  >
-                    <LogOut
-                      size={16}
-                      style={{ color: "rgba(255,255,255,0.6)" }}
-                    />
-                    Sign out
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+            >
+              Workspace Projects
+            </div>
+          </div>
         </div>
 
         {/* Create button */}
@@ -1289,7 +889,7 @@ export default function ProjectManagement({
                 margin: 0,
               }}
             >
-              {workspaceName}
+              Projects
             </h1>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

@@ -688,7 +688,7 @@ function Navbar({ onEnter, onNavigateToDocs }) {
             className="lp-btn lp-btn--primary lp-btn--sm"
             onClick={onEnter}
           >
-            Vào Demo Ngay <ArrowRight size={14} style={{ display: "inline-block", marginLeft: 4 }} />
+            Xem Demo <ArrowRight size={14} style={{ display: "inline-block", marginLeft: 4 }} />
           </button>
         </div>
       </div>
@@ -727,7 +727,7 @@ function Hero({ onEnter, onNavigateToDocs }) {
             className="lp-btn lp-btn--primary lp-btn--lg"
             onClick={onEnter}
           >
-            Vào Trải Nghiệm Demo Ngay <ArrowRight size={16} strokeWidth={2} />
+            Xem Demo Ngay <ArrowRight size={16} strokeWidth={2} />
           </button>
           <button
             id="hero-view-docs"
@@ -991,7 +991,7 @@ function BottomCTA({ onEnter, onNavigateToDocs }) {
               className="lp-btn lp-btn--primary lp-btn--lg"
               onClick={onEnter}
             >
-              Vào Trải Nghiệm Demo Ngay <ArrowRight size={16} strokeWidth={2} />
+              Xem Demo Ngay <ArrowRight size={16} strokeWidth={2} />
             </button>
             <button
               id="cta-view-docs"
