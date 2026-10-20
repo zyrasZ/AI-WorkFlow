@@ -1,195 +1,147 @@
-# Node-Based AI Platform - Figma Weave Style
+# AI-WorkFlow
 
-A modular React Flow-based AI platform inspired by **Figma Weave**, implementing professional dot grid background system and the **5 Pillars** architecture for AI workflow automation.
+A **no-code / low-code** AI workflow automation platform. Users build pipelines by dragging and dropping nodes onto a visual canvas, connecting them together, then hitting Run — the entire sequence executes automatically without writing a single line of code.
 
-## 🎨 **Figma Weave Dot Grid System**
+---
 
-### **Visual Design Philosophy**
-- **Deep Black Background** (`#0B0B0E`) - Creates infinite canvas feeling
-- **Subtle Dot Grid** - 24px spacing with 12% opacity white dots
-- **Invisible Alignment** - Provides structure without visual clutter
-- **Professional Layout** - Matches industry-standard design tools
+## The Problem
 
-### **Technical Implementation**
-```css
-/* Figma Weave Style Dot Grid */
-background-color: #0B0B0E;
-background-image: radial-gradient(circle, rgba(255,255,255,0.12) 1.2px, transparent 1.2px);
-background-size: 24px 24px;
-```
+Small teams and individuals constantly repeat time-consuming processes: gathering information from multiple sources, writing content, sending scheduled emails, classifying input data, calling external APIs. These tasks are both tedious and error-prone when done manually.
 
-### **Grid Specifications**
-- **Grid Size**: 24px × 24px
-- **Dot Size**: 1.2px radius
-- **Dot Color**: `rgba(255,255,255,0.12)` (12% opacity)
-- **Background**: `#0B0B0E` (Deep black)
-- **Alignment**: Invisible coordinate system for node positioning
+Existing solutions like Zapier, Make, and n8n still require users to understand connector configuration, API error handling, and credential management — the technical barrier remains high for non-developers.
 
-## 🏗️ **Architecture Overview**
+**AI-WorkFlow** takes a different approach: every step in the pipeline is represented by a node with a minimal configuration UI. AI handles the complex parts (content generation, analysis, conditional decision-making), while users only need to define _intent_ — what to do, with what data, and where to send it.
 
-### **Core Components**
+---
 
-1. **FigmaWeaveBackground.jsx** - Custom dot grid background system
-2. **GhostNode.jsx** - Glassmorphism nodes with preview capabilities
-3. **NeonEdge.jsx** - Animated data flow connections
-4. **GridInfo.jsx** - Interactive grid system information
-5. **Engine.js** - Sequential execution with DFS traversal
-6. **NodeRegistry.js** - Modular component system
+## Key Features
 
-### **5 Pillars System**
+**Drag-and-drop Canvas**
 
-Each node belongs to one of five specialized pillars:
+- Infinite canvas with Figma-style dot-grid alignment
+- Snap-to-grid, zoom, pan, and multi-select
+- Connect nodes by dragging handles — edge colors automatically distinguish data types
 
-- 🔍 **Research** (`#3b82f6`) - Data gathering, web scraping, PDF analysis
-- 💻 **Code** (`#10b981`) - Code generation, API calls, database queries  
-- 📈 **Marketing** (`#f59e0b`) - Content creation, SEO optimization, social media
-- 🎨 **Imagine** (`#8b5cf6`) - Image generation, design systems, UI mockups
-- 🎬 **Video** (`#ef4444`) - Video editing, subtitle generation, media processing
+**Node System**
 
-## 🎯 **Figma Weave Features**
+| Category           | Nodes                                                               |
+| ------------------ | ------------------------------------------------------------------- |
+| AI Models          | Groq Llama 3.3 70B, Llama 3.1 8B, Mixtral 8x7B, Gemma 2 9B          |
+| Logic              | If/Else, Switch, Loop, Merge, Delay                                 |
+| Email              | Email Account, Read Email, Filter Email, Email Template, Send Email |
+| Input / Output     | Prompt, File Input, Output                                          |
+| Research & Content | Web Scraper, PDF Analyzer, Content Writer, SEO Optimizer            |
+| Media              | Image Generator, Design System, Video Editor, Subtitle Generator    |
 
-### **Professional Canvas**
-- **Infinite Scroll** - Seamless panning and zooming
-- **Dot Grid Alignment** - Invisible 24px coordinate system
-- **Visual Hierarchy** - Nodes float above subtle background
-- **Clean Interface** - Minimal distractions, maximum focus
+**Execution Engine**
 
-### **Node System**
-- **Preview Integration** - Live image/video previews in nodes
-- **Glassmorphism Design** - Translucent with backdrop blur
-- **Status Indicators** - Real-time processing feedback
-- **Modular Architecture** - Easy to extend and customize
+- Graph traversal via DFS (Depth-First Search) to determine execution order
+- Data flows between nodes through `inputData / outputData` contracts
+- Conditional routing: unchosen branches are skipped along with all their downstream nodes
+- Realtime status indicator per node (idle → running → success / error)
 
-### **Data Flow Visualization**
-- **Animated Edges** - Pulse effects during data processing
-- **Color-Coded Connections** - Different colors for data types
-- **Success Feedback** - Visual confirmation of completed operations
-- **Professional Styling** - Subtle glows and smooth animations
+**Project Management**
 
-### **User Experience**
-- **Left-to-Right Flow** - Intuitive data processing direction
-- **Snap-to-Grid** - Automatic alignment assistance
-- **Context Panels** - Detailed node configuration
-- **Professional Tools** - Selection, pan, undo/redo controls
+- Multiple independent workflow projects
+- Auto-save canvas state to the backend (Supabase)
+- Thumbnail automatically generated from the canvas
 
-## 🛠️ **Usage**
+**Auth & Integrations**
 
-### **Running the Application**
+- Sign in with email/password or Google OAuth
+- Gmail integration: read and send email via OAuth2 or SMTP/IMAP
 
-```bash
-npm install
-npm run dev
-```
+---
 
-### **Grid System Benefits**
+## Tech Stack
 
-1. **Invisible Guidance** - Dots provide alignment without visual noise
-2. **Professional Layout** - Consistent spacing and organization
-3. **Infinite Canvas** - No boundaries, unlimited workspace
-4. **Focus Enhancement** - Reduced distractions, better concentration
-5. **Industry Standard** - Matches professional design tools
+| Layer              | Technology                          |
+| ------------------ | ----------------------------------- |
+| Frontend framework | React 19 + Vite 8                   |
+| Canvas / graph     | React Flow 11                       |
+| Animation          | Framer Motion 12, GSAP 3            |
+| Styling            | Tailwind CSS 3                      |
+| Smooth scroll      | Lenis                               |
+| Icons              | Lucide React                        |
+| Auth & Database    | Supabase                            |
+| AI inference       | Groq API (Llama, Mixtral, Gemma)    |
+| Deployment         | Vercel (frontend), Docker (backend) |
 
-### **Creating Workflows**
+---
 
-1. **Drag Components** - From organized sidebar to canvas
-2. **Align to Grid** - Automatic snapping to 24px coordinates
-3. **Connect Nodes** - Draw data flow connections
-4. **Configure Settings** - Expand nodes for detailed options
-5. **Execute Workflow** - Run button processes entire graph
-
-### **Grid Information**
-
-Click the grid info button (bottom-left) to learn about:
-- Grid specifications and measurements
-- Alignment system benefits
-- Visual design philosophy
-- Professional workflow tips
-
-## 🎨 **Design System**
-
-### **Color Palette**
-```css
-/* Background */
---bg-primary: #0B0B0E;
---bg-secondary: rgba(0,0,0,0.6);
-
-/* Grid System */
---grid-dots: rgba(255,255,255,0.12);
---grid-size: 24px;
-
-/* Pillar Colors */
---research: #3b82f6;
---code: #10b981;
---marketing: #f59e0b;
---imagine: #8b5cf6;
---video: #ef4444;
-
-/* UI Elements */
---glass-bg: rgba(255,255,255,0.08);
---glass-border: rgba(255,255,255,0.15);
---text-primary: rgba(255,255,255,0.9);
---text-secondary: rgba(255,255,255,0.6);
-```
-
-### **Typography**
-- **Font Family**: Inter, system-ui, sans-serif
-- **Primary Text**: `rgba(255,255,255,0.9)`
-- **Secondary Text**: `rgba(255,255,255,0.6)`
-- **Accent Text**: Pillar-specific colors
-
-### **Spacing System**
-- **Grid Base**: 24px
-- **Component Padding**: 12px, 16px, 24px
-- **Border Radius**: 8px, 12px, 16px
-- **Icon Sizes**: 12px, 16px, 20px, 24px
-
-## 📁 **Project Structure**
+## Architecture
 
 ```
 src/
 ├── components/
-│   ├── FigmaWeaveBackground.jsx    # Custom dot grid system
-│   ├── GhostNode.jsx              # Glassmorphism nodes
-│   ├── NeonEdge.jsx               # Animated connections
-│   ├── GridInfo.jsx               # Grid system info
-│   ├── Sidebar.jsx                # Component library
-│   └── PropertiesPanel.jsx        # Node configuration
+│   ├── sidebar/              # SlimNav, SidebarWrapper, LibraryPanel, FilesPanel
+│   ├── GhostNode.jsx         # Generic node with glassmorphism UI
+│   ├── PromptNode.jsx        # Prompt input with variable interpolation
+│   ├── OutputNode.jsx        # Renders final output
+│   ├── IfElseNode.jsx        # Conditional branching
+│   ├── SwitchNode.jsx        # Multi-case routing
+│   ├── LoopNode.jsx          # Iterative processing
+│   ├── DelayNode.jsx         # Step delay
+│   ├── MergeNode.jsx         # Merges multiple data streams
+│   ├── EmailAccountNode.jsx
+│   ├── ReadEmailNode.jsx
+│   ├── FilterEmailNode.jsx
+│   ├── EmailTemplateNode.jsx
+│   ├── SendEmailNode.jsx
+│   ├── NeonEdge.jsx          # Animated edge with pulse effect
+│   └── FigmaWeaveBackground.jsx  # Dot-grid canvas background
 ├── engine/
-│   └── Engine.js                  # Execution system
+│   └── Engine.js             # DFS execution engine + node processors
 ├── registry/
-│   └── NodeRegistry.js            # Component registry
-└── index.css                      # Figma Weave styles
+│   └── NodeRegistry.js       # Node type and processor registration
+├── hooks/
+│   ├── useAuth.jsx
+│   └── useCanvasLogic.js     # Connection logic, grid snapping
+└── lib/
+    ├── api.js                # API client wrapper
+    ├── supabase.js           # Supabase auth & DB
+    └── config.js
 ```
 
-## 🌟 **Key Improvements**
+**Workflow execution flow:**
 
-### **Professional Background**
-- ✅ **Figma Weave Style** - Exact dot grid replication
-- ✅ **24px Grid System** - Professional alignment
-- ✅ **Invisible Coordinates** - Subtle guidance system
-- ✅ **Infinite Canvas** - Boundless workspace feeling
+```
+User clicks Run
+  → Engine.buildExecutionOrder()   // DFS → ordered node list
+  → Engine.executeGraph()          // iterates over each node
+      → collectInputData()         // aggregates output from upstream nodes
+      → executeNode(node, input)   // calls the node's registered processor
+      → notifyStatusChange()       // updates UI in realtime
+      → passes output to downstream nodes
+  → onProgress callback            // renders execution progress
+```
 
-### **Enhanced UX**
-- ✅ **Grid Information** - Interactive learning system
-- ✅ **Visual Hierarchy** - Clear content organization
-- ✅ **Professional Tools** - Industry-standard controls
-- ✅ **Smooth Interactions** - Polished animations
+---
 
-### **Technical Excellence**
-- ✅ **Custom Background** - Optimized rendering
-- ✅ **Modular System** - Easy maintenance
-- ✅ **Performance** - Efficient updates
-- ✅ **Accessibility** - Proper focus management
+## Environment Variables
 
-## 🎯 **Next Steps**
+| Variable                    | Description                |
+| --------------------------- | -------------------------- |
+| `VITE_SUPABASE_URL`         | Supabase project URL       |
+| `VITE_SUPABASE_ANON_KEY`    | Supabase anon key          |
+| `VITE_API_BASE_URL`         | Backend API URL            |
+| `VITE_GOOGLE_CLIENT_ID`     | Google OAuth client ID     |
+| `VITE_GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 
-- [ ] Add real AI service integrations
-- [ ] Implement workflow templates
-- [ ] Add collaborative features
-- [ ] Create component marketplace
-- [ ] Add performance analytics
-- [ ] Implement auto-save functionality
+---
 
-## 📄 **License**
+## Roadmap
 
-MIT License - Professional AI workflow platform with Figma Weave design system.
+- [ ] Additional AI providers (OpenAI, Anthropic, Gemini)
+- [ ] Pre-built workflow templates (email newsletter, lead scoring, content pipeline)
+- [ ] Real-time collaboration on shared canvas
+- [ ] Webhook trigger — run workflows on incoming external events
+- [ ] Community node marketplace
+- [ ] Scheduler — run workflows on a cron schedule
+- [ ] Workflow version history
+
+---
+
+## License
+
+MIT

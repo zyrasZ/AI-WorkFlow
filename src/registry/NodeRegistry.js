@@ -214,206 +214,214 @@ const defaultNodeTypes = [
       return { type: 'code', language: data.fields?.[0]?.value, code: '// Generated code here' };
     }
   },
+  // ── GROQ MODELS (ACTIVE) ───────────────────────────────────────────
   {
-    type: 'groq-llama-3.3-70b',
+    type: 'groq-gpt-oss-120b',
     pillar: 'code',
-    label: 'Groq Llama 3.3 70B',
-    subtitle: 'Fast inference with Llama 3.3',
+    label: 'Groq GPT-OSS 120B',
+    subtitle: 'Mạnh nhất (120B) - Groq',
     color: '#10b981',
     defaultFields: [
       { label: 'Temperature', type: 'select', value: '0.7', options: ['0.1', '0.3', '0.5', '0.7', '0.9', '1.0'] },
       { label: 'Max Tokens', type: 'text', value: '1000', placeholder: '1000' }
     ],
     processor: async (data, inputs) => {
-      console.log('🚀 Groq Llama 3.3 70B processing:', data.label);
-      
-      // Import API client dynamically
+      console.log('🚀 Groq GPT-OSS 120B processing:', data.label);
       const { apiClient } = await import('../lib/api.js');
-      
-      // Chỉ lấy prompt từ inputs (từ PromptNode truyền qua)
       const prompt = (inputs?.prompt || inputs?.value || '').trim();
       const temperature = parseFloat(data.fields?.[0]?.value || data.temperature || '0.7');
       const maxTokens = parseInt(data.fields?.[1]?.value || data.maxTokens || '1000');
       
       if (!prompt) {
-        console.warn('No prompt provided, skipping node execution');
-        return { 
-          type: 'text', 
-          model: 'llama-3.3-70b-versatile',
-          response: 'Chưa có prompt. Hãy kết nối với Prompt Node.',
-          skipped: true
-        };
+        return { type: 'text', model: 'openai/gpt-oss-120b', response: 'Chưa có prompt. Hãy kết nối với Prompt Node.', skipped: true };
       }
-      
       try {
         const response = await apiClient.chatWithAI({
           provider: 'groq',
-          model: 'llama-3.3-70b-versatile',
-          prompt: prompt,
-          temperature: temperature,
-          maxTokens: maxTokens
+          model: 'openai/gpt-oss-120b',
+          prompt,
+          temperature,
+          maxTokens
         });
-        
-        return { 
-          type: 'text', 
-          model: 'llama-3.3-70b-versatile',
-          response: response.data?.response || response.response,
-          usage: response.data?.usage || response.usage
-        };
+        return { type: 'text', model: 'openai/gpt-oss-120b', response: response.data?.response || response.response, usage: response.data?.usage || response.usage };
       } catch (error) {
-        console.error('Groq API error:', error);
-        throw new Error(`Groq API failed: ${error.message}`);
+        throw new Error(`Groq API failed: ${error.message}`, { cause: error });
       }
+    }
+  },
+  {
+    type: 'groq-gpt-oss-20b',
+    pillar: 'code',
+    label: 'Groq GPT-OSS 20B',
+    subtitle: 'Siêu nhanh & nhẹ - Groq',
+    color: '#10b981',
+    defaultFields: [
+      { label: 'Temperature', type: 'select', value: '0.7', options: ['0.1', '0.3', '0.5', '0.7', '0.9', '1.0'] },
+      { label: 'Max Tokens', type: 'text', value: '1000', placeholder: '1000' }
+    ],
+    processor: async (data, inputs) => {
+      console.log('🚀 Groq GPT-OSS 20B processing:', data.label);
+      const { apiClient } = await import('../lib/api.js');
+      const prompt = (inputs?.prompt || inputs?.value || '').trim();
+      const temperature = parseFloat(data.fields?.[0]?.value || data.temperature || '0.7');
+      const maxTokens = parseInt(data.fields?.[1]?.value || data.maxTokens || '1000');
+      
+      if (!prompt) {
+        return { type: 'text', model: 'openai/gpt-oss-20b', response: 'Chưa có prompt. Hãy kết nối với Prompt Node.', skipped: true };
+      }
+      try {
+        const response = await apiClient.chatWithAI({
+          provider: 'groq',
+          model: 'openai/gpt-oss-20b',
+          prompt,
+          temperature,
+          maxTokens
+        });
+        return { type: 'text', model: 'openai/gpt-oss-20b', response: response.data?.response || response.response, usage: response.data?.usage || response.usage };
+      } catch (error) {
+        throw new Error(`Groq API failed: ${error.message}`, { cause: error });
+      }
+    }
+  },
+  {
+    type: 'groq-qwen-3.8-27b',
+    pillar: 'code',
+    label: 'Groq Qwen 3.8 27B',
+    subtitle: 'Đa ngôn ngữ & Logic - Groq',
+    color: '#10b981',
+    defaultFields: [
+      { label: 'Temperature', type: 'select', value: '0.7', options: ['0.1', '0.3', '0.5', '0.7', '0.9', '1.0'] },
+      { label: 'Max Tokens', type: 'text', value: '1000', placeholder: '1000' }
+    ],
+    processor: async (data, inputs) => {
+      console.log('🚀 Groq Qwen 3.8 27B processing:', data.label);
+      const { apiClient } = await import('../lib/api.js');
+      const prompt = (inputs?.prompt || inputs?.value || '').trim();
+      const temperature = parseFloat(data.fields?.[0]?.value || data.temperature || '0.7');
+      const maxTokens = parseInt(data.fields?.[1]?.value || data.maxTokens || '1000');
+      
+      if (!prompt) {
+        return { type: 'text', model: 'qwen/qwen3.8-27b', response: 'Chưa có prompt. Hãy kết nối với Prompt Node.', skipped: true };
+      }
+      try {
+        const response = await apiClient.chatWithAI({
+          provider: 'groq',
+          model: 'qwen/qwen3.8-27b',
+          prompt,
+          temperature,
+          maxTokens
+        });
+        return { type: 'text', model: 'qwen/qwen3.8-27b', response: response.data?.response || response.response, usage: response.data?.usage || response.usage };
+      } catch (error) {
+        throw new Error(`Groq API failed: ${error.message}`, { cause: error });
+      }
+    }
+  },
+  {
+    type: 'groq-allam-2-7b',
+    pillar: 'code',
+    label: 'Groq Allam 2 7B',
+    subtitle: 'Gọn nhẹ - Groq',
+    color: '#10b981',
+    defaultFields: [
+      { label: 'Temperature', type: 'select', value: '0.7', options: ['0.1', '0.3', '0.5', '0.7', '0.9', '1.0'] },
+      { label: 'Max Tokens', type: 'text', value: '1000', placeholder: '1000' }
+    ],
+    processor: async (data, inputs) => {
+      console.log('🚀 Groq Allam 2 7B processing:', data.label);
+      const { apiClient } = await import('../lib/api.js');
+      const prompt = (inputs?.prompt || inputs?.value || '').trim();
+      const temperature = parseFloat(data.fields?.[0]?.value || data.temperature || '0.7');
+      const maxTokens = parseInt(data.fields?.[1]?.value || data.maxTokens || '1000');
+      
+      if (!prompt) {
+        return { type: 'text', model: 'allam-2-7b', response: 'Chưa có prompt. Hãy kết nối với Prompt Node.', skipped: true };
+      }
+      try {
+        const response = await apiClient.chatWithAI({
+          provider: 'groq',
+          model: 'allam-2-7b',
+          prompt,
+          temperature,
+          maxTokens
+        });
+        return { type: 'text', model: 'allam-2-7b', response: response.data?.response || response.response, usage: response.data?.usage || response.usage };
+      } catch (error) {
+        throw new Error(`Groq API failed: ${error.message}`, { cause: error });
+      }
+    }
+  },
+  // ── LEGACY ALIASES (Tương thích ngược các workflow cũ đã lưu) ───────────
+  {
+    type: 'groq-llama-3.3-70b',
+    pillar: 'code',
+    label: 'Groq Llama 3.3 70B (Auto-routed)',
+    subtitle: 'Tự động định tuyến sang GPT-OSS 120B',
+    color: '#10b981',
+    defaultFields: [
+      { label: 'Temperature', type: 'select', value: '0.7', options: ['0.1', '0.3', '0.5', '0.7', '0.9', '1.0'] },
+      { label: 'Max Tokens', type: 'text', value: '1000', placeholder: '1000' }
+    ],
+    processor: async (data, inputs) => {
+      const { apiClient } = await import('../lib/api.js');
+      const prompt = (inputs?.prompt || inputs?.value || '').trim();
+      if (!prompt) return { type: 'text', model: 'openai/gpt-oss-120b', response: 'Chưa có prompt.', skipped: true };
+      const res = await apiClient.chatWithAI({ provider: 'groq', model: 'openai/gpt-oss-120b', prompt });
+      return { type: 'text', model: 'openai/gpt-oss-120b', response: res.data?.response || res.response, usage: res.data?.usage || res.usage };
     }
   },
   {
     type: 'groq-llama-3.1-8b',
     pillar: 'code',
-    label: 'Groq Llama 3.1 8B',
-    subtitle: 'Lightweight & fast Llama model',
+    label: 'Groq Llama 3.1 8B (Auto-routed)',
+    subtitle: 'Tự động định tuyến sang GPT-OSS 20B',
     color: '#10b981',
     defaultFields: [
       { label: 'Temperature', type: 'select', value: '0.7', options: ['0.1', '0.3', '0.5', '0.7', '0.9', '1.0'] },
       { label: 'Max Tokens', type: 'text', value: '1000', placeholder: '1000' }
     ],
     processor: async (data, inputs) => {
-      console.log('🚀 Groq Llama 3.1 8B processing:', data.label);
-      
       const { apiClient } = await import('../lib/api.js');
-      
       const prompt = (inputs?.prompt || inputs?.value || '').trim();
-      const temperature = parseFloat(data.fields?.[0]?.value || data.temperature || '0.7');
-      const maxTokens = parseInt(data.fields?.[1]?.value || data.maxTokens || '1000');
-      
-      if (!prompt) {
-        console.warn('No prompt provided, skipping node execution');
-        return { 
-          type: 'text', 
-          model: 'llama-3.1-8b-instant',
-          response: 'Chưa có prompt. Hãy kết nối với Prompt Node.',
-          skipped: true
-        };
-      }
-      
-      try {
-        const response = await apiClient.chatWithAI({
-          provider: 'groq',
-          model: 'llama-3.1-8b-instant',
-          prompt: prompt,
-          temperature: temperature,
-          maxTokens: maxTokens
-        });
-        
-        return { 
-          type: 'text', 
-          model: 'llama-3.1-8b-instant',
-          response: response.data?.response || response.response,
-          usage: response.data?.usage || response.usage
-        };
-      } catch (error) {
-        console.error('Groq API error:', error);
-        throw new Error(`Groq API failed: ${error.message}`);
-      }
+      if (!prompt) return { type: 'text', model: 'openai/gpt-oss-20b', response: 'Chưa có prompt.', skipped: true };
+      const res = await apiClient.chatWithAI({ provider: 'groq', model: 'openai/gpt-oss-20b', prompt });
+      return { type: 'text', model: 'openai/gpt-oss-20b', response: res.data?.response || res.response, usage: res.data?.usage || res.usage };
     }
   },
   {
     type: 'groq-mixtral-8x7b',
     pillar: 'code',
-    label: 'Groq Mixtral 8x7B',
-    subtitle: 'Mixture of Experts model',
+    label: 'Groq Mixtral (Auto-routed)',
+    subtitle: 'Tự động định tuyến sang Qwen 3.8 27B',
     color: '#10b981',
     defaultFields: [
       { label: 'Temperature', type: 'select', value: '0.7', options: ['0.1', '0.3', '0.5', '0.7', '0.9', '1.0'] },
       { label: 'Max Tokens', type: 'text', value: '1000', placeholder: '1000' }
     ],
     processor: async (data, inputs) => {
-      console.log('🚀 Groq Mixtral 8x7B processing:', data.label);
-      
       const { apiClient } = await import('../lib/api.js');
-      
       const prompt = (inputs?.prompt || inputs?.value || '').trim();
-      const temperature = parseFloat(data.fields?.[0]?.value || data.temperature || '0.7');
-      const maxTokens = parseInt(data.fields?.[1]?.value || data.maxTokens || '1000');
-      
-      if (!prompt) {
-        console.warn('No prompt provided, skipping node execution');
-        return { 
-          type: 'text', 
-          model: 'mixtral-8x7b-32768',
-          response: 'Chưa có prompt. Hãy kết nối với Prompt Node.',
-          skipped: true
-        };
-      }
-      
-      try {
-        const response = await apiClient.chatWithAI({
-          provider: 'groq',
-          model: 'mixtral-8x7b-32768',
-          prompt: prompt,
-          temperature: temperature,
-          maxTokens: maxTokens
-        });
-        
-        return { 
-          type: 'text', 
-          model: 'mixtral-8x7b-32768',
-          response: response.data?.response || response.response,
-          usage: response.data?.usage || response.usage
-        };
-      } catch (error) {
-        console.error('Groq API error:', error);
-        throw new Error(`Groq API failed: ${error.message}`);
-      }
+      if (!prompt) return { type: 'text', model: 'qwen/qwen3.8-27b', response: 'Chưa có prompt.', skipped: true };
+      const res = await apiClient.chatWithAI({ provider: 'groq', model: 'qwen/qwen3.8-27b', prompt });
+      return { type: 'text', model: 'qwen/qwen3.8-27b', response: res.data?.response || res.response, usage: res.data?.usage || res.usage };
     }
   },
   {
     type: 'groq-gemma-2-9b',
     pillar: 'code',
-    label: 'Groq Gemma 2 9B',
-    subtitle: 'Google Gemma on Groq',
+    label: 'Groq Gemma (Auto-routed)',
+    subtitle: 'Tự động định tuyến sang Allam 2 7B',
     color: '#10b981',
     defaultFields: [
       { label: 'Temperature', type: 'select', value: '0.7', options: ['0.1', '0.3', '0.5', '0.7', '0.9', '1.0'] },
       { label: 'Max Tokens', type: 'text', value: '1000', placeholder: '1000' }
     ],
     processor: async (data, inputs) => {
-      console.log('🚀 Groq Gemma 2 9B processing:', data.label);
-      
       const { apiClient } = await import('../lib/api.js');
-      
       const prompt = (inputs?.prompt || inputs?.value || '').trim();
-      const temperature = parseFloat(data.fields?.[0]?.value || data.temperature || '0.7');
-      const maxTokens = parseInt(data.fields?.[1]?.value || data.maxTokens || '1000');
-      
-      if (!prompt) {
-        console.warn('No prompt provided, skipping node execution');
-        return { 
-          type: 'text', 
-          model: 'gemma2-9b-it',
-          response: 'Chưa có prompt. Hãy kết nối với Prompt Node.',
-          skipped: true
-        };
-      }
-      
-      try {
-        const response = await apiClient.chatWithAI({
-          provider: 'groq',
-          model: 'gemma2-9b-it',
-          prompt: prompt,
-          temperature: temperature,
-          maxTokens: maxTokens
-        });
-        
-        return { 
-          type: 'text', 
-          model: 'gemma2-9b-it',
-          response: response.data?.response || response.response,
-          usage: response.data?.usage || response.usage
-        };
-      } catch (error) {
-        console.error('Groq API error:', error);
-        throw new Error(`Groq API failed: ${error.message}`);
-      }
+      if (!prompt) return { type: 'text', model: 'allam-2-7b', response: 'Chưa có prompt.', skipped: true };
+      const res = await apiClient.chatWithAI({ provider: 'groq', model: 'allam-2-7b', prompt });
+      return { type: 'text', model: 'allam-2-7b', response: res.data?.response || res.response, usage: res.data?.usage || res.usage };
     }
   },
   {

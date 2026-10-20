@@ -1,0 +1,199 @@
+[
+  {
+    "id": "wf_1792381644175_q8118",
+    "name": "Untitled Workflow",
+    "description": "New workflow created from dashboard",
+    "metadata": {
+      "created_from": "dashboard",
+      "version": "1.0.0",
+      "nodes": [
+        {
+          "id": "node-1792491324150",
+          "type": "emailAccountNode",
+          "position": {
+            "x": 300,
+            "y": 330
+          },
+          "data": {
+            "label": "Email Account",
+            "color": "#8b5cf6",
+            "email": "",
+            "password": "",
+            "hasOutput": true,
+            "nodeType": "email-account",
+            "mode": "oauth",
+            "smtpProvider": "gmail",
+            "value": {
+              "mode": "oauth",
+              "email": "",
+              "password": "",
+              "host": "smtp.gmail.com",
+              "port": 587,
+              "gmailAccessToken": "",
+              "gmailRefreshToken": ""
+            }
+          }
+        }
+      ],
+      "edges": [],
+      "thumbnail": null,
+      "lastModified": "2026-10-20T10:15:26.169Z",
+      "nodeCount": 1,
+      "edgeCount": 0
+    },
+    "created_at": "2026-10-19T03:47:24.175Z",
+    "updated_at": "2026-10-20T10:15:26.174Z"
+  },
+  {
+    "id": "wf_1792327275293_hcj8x",
+    "name": "AI Email Summary Pipeline",
+    "description": "Workflow tự động tóm tắt email và gửi thông báo",
+    "metadata": {
+      "nodes": [
+        {
+          "id": "node-1792377318631",
+          "type": "promptNode",
+          "position": {
+            "x": 360,
+            "y": 270
+          },
+          "data": {
+            "label": "Prompt",
+            "color": "#8b5cf6",
+            "prompt": "cho tôi 10 từ tiếng anh ngẫu nhiên",
+            "variables": [],
+            "hasOutput": true,
+            "nodeType": "prompt-input",
+            "value": "cho tôi 10 từ tiếng anh ngẫu nhiên"
+          }
+        },
+        {
+          "id": "node-1792377323699",
+          "type": "ghostNode",
+          "position": {
+            "x": 750,
+            "y": 360
+          },
+          "data": {
+            "label": "Groq Llama 3.3 70B",
+            "subtitle": "Fast inference with Llama 3.3",
+            "pillar": "code",
+            "nodeType": "groq-llama-3.3-70b",
+            "color": "#10b981",
+            "status": "success",
+            "fields": [
+              {
+                "label": "Temperature",
+                "type": "select",
+                "value": "0.7",
+                "options": [
+                  "0.1",
+                  "0.3",
+                  "0.5",
+                  "0.7",
+                  "0.9",
+                  "1.0"
+                ]
+              },
+              {
+                "label": "Max Tokens",
+                "type": "text",
+                "value": "1000",
+                "placeholder": "1000"
+              }
+            ],
+            "hasInput": true,
+            "hasOutput": true,
+            "inputPrompt": "cho tôi 10 từ tiếng anh ngẫu nhiên",
+            "hasUpdatedInput": false,
+            "result": {
+              "type": "text",
+              "model": "llama-3.1-8b-instant",
+              "response": "Here are 10 random English words:\n\n1. **Zephyr**  \n2. **Cobbler**  \n3. **Luminous**  \n4. **Glimpse**  \n5. **Harbor**  \n6. **Quibble**  \n7. **Nimbus**  \n8. **Tremor**  \n9. **Verdant**  \n10. **Saffron**  ",
+              "usage": {
+                "queue_time": 0.053818782,
+                "prompt_tokens": 92,
+                "prompt_time": 0.008392308,
+                "completion_tokens": 141,
+                "completion_time": 0.297730847,
+                "total_tokens": 233,
+                "total_time": 0.306123155,
+                "completion_tokens_details": {
+                  "reasoning_tokens": 50
+                }
+              }
+            },
+            "lastExecuted": "2026-10-19T02:46:33.883Z"
+          }
+        },
+        {
+          "id": "node-1792377326210",
+          "type": "outputNode",
+          "position": {
+            "x": 1140,
+            "y": 300
+          },
+          "data": {
+            "label": "Kết quả AI",
+            "color": "#f59e0b",
+            "status": "success",
+            "nodeType": "output",
+            "result": {
+              "type": "text",
+              "model": "llama-3.1-8b-instant",
+              "response": "Here are 10 random English words:\n\n1. **Zephyr**  \n2. **Cobbler**  \n3. **Luminous**  \n4. **Glimpse**  \n5. **Harbor**  \n6. **Quibble**  \n7. **Nimbus**  \n8. **Tremor**  \n9. **Verdant**  \n10. **Saffron**  ",
+              "usage": {
+                "queue_time": 0.053818782,
+                "prompt_tokens": 92,
+                "prompt_time": 0.008392308,
+                "completion_tokens": 141,
+                "completion_time": 0.297730847,
+                "total_tokens": 233,
+                "total_time": 0.306123155,
+                "completion_tokens_details": {
+                  "reasoning_tokens": 50
+                }
+              }
+            },
+            "lastExecuted": "2026-10-19T02:46:33.883Z"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "type": "neonEdge",
+          "source": "node-1792377318631",
+          "sourceHandle": null,
+          "target": "node-1792377323699",
+          "targetHandle": null,
+          "data": {
+            "color": "#8b5cf6",
+            "animated": false,
+            "dataFlow": true
+          },
+          "id": "reactflow__edge-node-1792377318631-node-1792377323699"
+        },
+        {
+          "type": "neonEdge",
+          "source": "node-1792377323699",
+          "sourceHandle": null,
+          "target": "node-1792377326210",
+          "targetHandle": null,
+          "data": {
+            "color": "#3b82f6",
+            "animated": false,
+            "dataFlow": true,
+            "success": false
+          },
+          "id": "reactflow__edge-node-1792377323699-node-1792377326210"
+        }
+      ],
+      "nodeCount": 3,
+      "edgeCount": 2,
+      "thumbnail": null,
+      "lastModified": "2026-10-19T02:46:51.165Z"
+    },
+    "created_at": "2026-10-18T12:41:15.293Z",
+    "updated_at": "2026-10-19T02:46:51.170Z"
+  }
+]

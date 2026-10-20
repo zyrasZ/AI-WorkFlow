@@ -3,7 +3,13 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey  = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseKey);
+
+export const supabase = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseKey)
+  : createClient('https://placeholder.supabase.co', 'placeholder-anon-key', {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
 
 /**
  * Get Gmail provider_token from current Supabase session.
@@ -11,6 +17,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
  * Returns null if not available (user needs to re-login).
  */
 export async function getGmailToken() {
+  if (!isSupabaseConfigured) return null;
   try {
     const { data: { session }, error } = await supabase.auth.getSession();
     if (error || !session) {
@@ -39,6 +46,10 @@ export async function getGmailToken() {
  * Use this when the user needs to re-authorize Gmail access.
  */
 export async function signInWithGoogle() {
+  if (!isSupabaseConfigured) {
+    alert("Vui lòng cấu hình VITE_SUPABASE_URL và VITE_SUPABASE_ANON_KEY trong file .env để đăng nhập bằng Google.");
+    return;
+  }
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -65,6 +76,10 @@ export async function signInWithGoogle() {
  * Saves the nodeId to sessionStorage so after redirect we know which node to update.
  */
 export async function signInWithGoogleSelectAccount(nodeId) {
+  if (!isSupabaseConfigured) {
+    alert("Vui lòng cấu hình VITE_SUPABASE_URL và VITE_SUPABASE_ANON_KEY trong file .env để đăng nhập bằng Google.");
+    return;
+  }
   if (nodeId) {
     sessionStorage.setItem('oauth_target_node_id', nodeId);
   }
@@ -96,6 +111,7 @@ export async function signInWithGoogleSelectAccount(nodeId) {
  * so that specific EmailAccountNode can update its own token without affecting others.
  */
 export function listenForAuthChanges() {
+  if (!isSupabaseConfigured) return;
   supabase.auth.onAuthStateChange((event, session) => {
     // Skip noisy non-actionable events
     if (event === 'INITIAL_SESSION') return;

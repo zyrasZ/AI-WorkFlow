@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { FileText, Plus, MoreVertical, Trash2, Clock } from 'lucide-react';
-import { apiClient } from '../../lib/api';
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { FileText, Plus, MoreVertical, Trash2, Clock } from "lucide-react";
+import { apiClient } from "../../lib/api";
 
 function formatTimeAgo(date) {
   const seconds = Math.floor((Date.now() - date) / 1000);
-  if (seconds < 60) return 'vừa xong';
+  if (seconds < 60) return "vừa xong";
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes} phút trước`;
   const hours = Math.floor(minutes / 60);
@@ -21,48 +21,49 @@ export default function FilesPanel({ onOpenFile, onCreateFile }) {
   const [menuOpen, setMenuOpen] = useState(null);
 
   useEffect(() => {
-    loadFiles();
-  }, []);
+    let isMounted = true;
 
-  const loadFiles = async () => {
-    try {
-      setLoading(true);
-      const response = await apiClient.getWorkflows({ limit: 20 });
-      console.log('📥 Loading files, response:', response);
-      
-      const workflows = response.data.workflows.map(w => {
-        const thumbnail = w.metadata?.thumbnail || null;
-        console.log('📄 Workflow:', w.name, 'has thumbnail:', !!thumbnail, thumbnail ? `(${thumbnail.substring(0, 50)}...)` : '');
-        
-        return {
-          id: w.id,
-          name: w.name || 'Untitled',
-          lastEdited: new Date(w.updated_at).getTime(),
-          nodeCount: w.metadata?.nodeCount || 0,
-          thumbnail: thumbnail
-        };
+    apiClient
+      .getWorkflows({ limit: 20 })
+      .then((response) => {
+        if (!isMounted) return;
+        const workflows = response.data.workflows.map((w) => {
+          const thumbnail = w.metadata?.thumbnail || null;
+          return {
+            id: w.id,
+            name: w.name || "Untitled",
+            lastEdited: new Date(w.updated_at).getTime(),
+            nodeCount: w.metadata?.nodeCount || 0,
+            thumbnail: thumbnail,
+          };
+        });
+        setFiles(workflows);
+      })
+      .catch((err) => {
+        console.error("Failed to load files:", err);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
       });
-      
-      console.log('✅ Loaded', workflows.length, 'workflows');
-      setFiles(workflows);
-    } catch (err) {
-      console.error('Failed to load files:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleDelete = async (id, e) => {
     e.stopPropagation();
-    if (!confirm('Xóa workflow này?')) return;
-    
+    if (!confirm("Xóa workflow này?")) return;
+
     try {
       await apiClient.deleteWorkflow(id);
-      setFiles(prev => prev.filter(f => f.id !== id));
+      setFiles((prev) => prev.filter((f) => f.id !== id));
       setMenuOpen(null);
     } catch (err) {
-      console.error('Failed to delete:', err);
-      alert('Không thể xóa workflow');
+      console.error("Failed to delete:", err);
+      alert("Không thể xóa workflow");
     }
   };
 
@@ -81,12 +82,18 @@ export default function FilesPanel({ onOpenFile, onCreateFile }) {
           </button>
         </div>
         <p className="text-xs text-white/40">
-          {files.length} workflow{files.length !== 1 ? 's' : ''}
+          {files.length} workflow{files.length !== 1 ? "s" : ""}
         </p>
       </div>
 
       {/* Files List */}
-      <div className="flex-1 overflow-y-auto p-2" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
+      <div
+        className="flex-1 overflow-y-auto p-2"
+        style={{
+          scrollbarWidth: "thin",
+          scrollbarColor: "rgba(255,255,255,0.1) transparent",
+        }}
+      >
         {loading ? (
           <div className="flex items-center justify-center py-10">
             <div className="w-5 h-5 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
@@ -104,26 +111,29 @@ export default function FilesPanel({ onOpenFile, onCreateFile }) {
           </div>
         ) : (
           <div className="space-y-1">
-            {files.map(file => (
+            {files.map((file) => (
               <motion.div
                 key={file.id}
                 initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}
                 onMouseEnter={() => setHoveredFile(file.id)}
-                onMouseLeave={() => { setHoveredFile(null); setMenuOpen(null); }}
+                onMouseLeave={() => {
+                  setHoveredFile(null);
+                  setMenuOpen(null);
+                }}
                 onClick={() => onOpenFile(file)}
                 className="relative bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg cursor-pointer transition-all group overflow-hidden"
               >
                 {/* Thumbnail Preview */}
                 {file.thumbnail ? (
                   <div className="relative aspect-video bg-black/60 overflow-hidden">
-                    <img 
-                      src={file.thumbnail} 
+                    <img
+                      src={file.thumbnail}
                       alt={file.name}
                       className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                    
+
                     {/* Node count badge */}
                     {file.nodeCount > 0 && (
                       <div className="absolute top-2 right-2 px-2 py-0.5 bg-black/70 backdrop-blur-sm border border-white/20 rounded text-[10px] text-white/80">
@@ -154,7 +164,10 @@ export default function FilesPanel({ onOpenFile, onCreateFile }) {
                     {hoveredFile === file.id && (
                       <div className="relative ml-2">
                         <button
-                          onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === file.id ? null : file.id); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMenuOpen(menuOpen === file.id ? null : file.id);
+                          }}
                           className="p-1 hover:bg-white/10 rounded transition-colors"
                         >
                           <MoreVertical size={12} className="text-white/60" />
