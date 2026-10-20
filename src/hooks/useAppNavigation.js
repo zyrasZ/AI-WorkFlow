@@ -24,14 +24,24 @@ export function useAppNavigation() {
     }
   }
 
-  const [showLanding, setShowLanding] = useState(false);
+  const getInitialPage = () => {
+    if (typeof window === "undefined") return "landing";
+    const hash = window.location.hash;
+    if (hash.includes("docs")) return "docs";
+    if (hash.includes("projects") || hash.includes("project")) return "projects";
+    if (hash.includes("settings")) return "settings";
+    return "landing";
+  };
+  const initialPage = getInitialPage();
+
+  const [showLanding, setShowLanding] = useState(initialPage === "landing");
   const [showSignIn, setShowSignIn] = useState(false);
   const [showSignUp, setShowSignUp] = useState(false);
-  const [showProjectManagement, setShowProjectManagement] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showDocumentation, setShowDocumentation] = useState(false);
+  const [showProjectManagement, setShowProjectManagement] = useState(initialPage === "projects");
+  const [showSettings, setShowSettings] = useState(initialPage === "settings");
+  const [showDocumentation, setShowDocumentation] = useState(initialPage === "docs");
   const [currentProject, setCurrentProject] = useState(null);
-  const [navigationHistory, setNavigationHistory] = useState(["projects"]);
+  const [navigationHistory, setNavigationHistory] = useState([initialPage]);
   const [projectManagementKey, setProjectManagementKey] = useState(0);
 
   // ── Supabase auth listener ────────────────────────────────────────────────
@@ -84,14 +94,15 @@ export function useAppNavigation() {
         setShowDocumentation(false);
         setCurrentProject(null);
         setNavigationHistory(["landing"]);
-      } else if (page === "signin") {
+      } else if (page === "signin" || page === "signup") {
         setShowLanding(false);
-        setShowSignIn(true);
-        setShowProjectManagement(false);
+        setShowSignIn(false);
+        setShowSignUp(false);
+        setShowProjectManagement(true);
         setShowSettings(false);
         setShowDocumentation(false);
         setCurrentProject(null);
-        setNavigationHistory(["landing", "signin"]);
+        setNavigationHistory(["landing", "projects"]);
       } else if (page === "projects") {
         setShowLanding(false);
         setShowSignIn(false);
@@ -133,28 +144,43 @@ export function useAppNavigation() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  // ── Navigation helpers ────────────────────────────────────────────────────
-  const navigateToSignIn = useCallback(() => {
-    setShowLanding(false);
-    setShowSignIn(true);
+  // ── Navigation helpers (Bỏ qua Login, vào thẳng Demo) ────────────────────
+  const handleSignIn = useCallback(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("office_weave_token", "dev_token_office_weave_2026");
+      localStorage.setItem(
+        "user_data",
+        JSON.stringify({
+          id: "user_dev_01",
+          email: "developer@workflow.ai",
+          name: "Developer Demo",
+          role: "admin",
+          provider: "local",
+        }),
+      );
+    }
+    setShowSignIn(false);
     setShowSignUp(false);
-    setNavigationHistory((prev) => [...prev, "signin"]);
-    window.history.pushState({ page: "signin" }, "", "#/signin");
+    setShowLanding(false);
+    setShowSettings(false);
+    setShowDocumentation(false);
+    setShowProjectManagement(true);
+    setProjectManagementKey((k) => k + 1);
+    setNavigationHistory(["landing", "projects"]);
+    window.history.pushState({ page: "projects" }, "", "#/projects");
   }, []);
+
+  const navigateToSignIn = useCallback(() => {
+    handleSignIn();
+  }, [handleSignIn]);
 
   const navigateToSignUp = useCallback(() => {
-    setShowSignIn(false);
-    setShowSignUp(true);
-    setNavigationHistory((prev) => [...prev, "signup"]);
-    window.history.pushState({ page: "signup" }, "", "#/signup");
-  }, []);
+    handleSignIn();
+  }, [handleSignIn]);
 
   const navigateBackToSignIn = useCallback(() => {
-    setShowSignUp(false);
-    setShowSignIn(true);
-    setNavigationHistory((prev) => [...prev, "signin"]);
-    window.history.pushState({ page: "signin" }, "", "#/signin");
-  }, []);
+    handleSignIn();
+  }, [handleSignIn]);
 
   const navigateToSettings = useCallback(() => {
     setShowProjectManagement(false);
@@ -179,15 +205,7 @@ export function useAppNavigation() {
     window.history.back();
   }, []);
 
-  const handleSignIn = useCallback(() => {
-    setShowSignIn(false);
-    setShowSignUp(false);
-    setShowLanding(false);
-    setShowProjectManagement(true);
-    setProjectManagementKey((k) => k + 1);
-    setNavigationHistory(["projects"]);
-    window.history.replaceState({ page: "projects" }, "", "#/projects");
-  }, []);
+
 
   const handleLogout = useCallback(async () => {
     try {
