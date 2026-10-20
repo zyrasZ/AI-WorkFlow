@@ -5,6 +5,7 @@
  * Styles live in ./LandingPage.css (all classes prefixed with `lp-`).
  */
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Activity,
   ArrowRight,
@@ -238,6 +239,7 @@ function FlowNode({ x, y, w, h, node, delay }) {
 }
 
 function FlowDiagram() {
+  const { t } = useTranslation();
   const W = 960;
   const H = 432;
   const NW = 200;
@@ -275,13 +277,13 @@ function FlowDiagram() {
       >
         {/* Column labels */}
         <text x={LX} y="14" className="lp-svg-col">
-          INPUTS
+          {t("landing.hero.diagramInputs", "INPUTS")}
         </text>
         <text x={CX} y="14" textAnchor="middle" className="lp-svg-col">
-          ENGINE
+          {t("landing.hero.diagramEngine", "ENGINE")}
         </text>
         <text x={RX + NW} y="14" textAnchor="end" className="lp-svg-col">
-          OUTPUTS
+          {t("landing.hero.diagramOutputs", "OUTPUTS")}
         </text>
 
         {/* Wires */}
@@ -517,6 +519,7 @@ const CANVAS_EDGES = [
 ];
 
 function CanvasMockup() {
+  const { t } = useTranslation();
   const W = 860;
   const H = 380;
   const NW = 170;
@@ -575,7 +578,7 @@ function CanvasMockup() {
             <animate attributeName="opacity" values="1;0.35;1" dur="2s" repeatCount="indefinite" />
           </circle>
           <text x={ai.x + 16} y={ai.y - 10.5} className="lp-svg-sub">
-            running · 1.2s
+            {t("landing.canvas.running", "running")} · 1.2s
           </text>
         </g>
 
@@ -639,13 +642,15 @@ function CanvasMockup() {
    Page sections
    ════════════════════════════════════════════════════════════════════ */
 const NAV_LINKS = [
-  { id: "how-it-works", label: "How it works" },
-  { id: "features", label: "Features" },
-  { id: "canvas", label: "Canvas" },
-  { id: "nodes", label: "Nodes" },
+  { id: "how-it-works", key: "howItWorks" },
+  { id: "features", key: "features" },
+  { id: "canvas", key: "canvas" },
+  { id: "nodes", key: "nodes" },
 ];
 
 function Navbar({ onEnter, onNavigateToDocs }) {
+  const { t } = useTranslation();
+
   return (
     <header className="lp-nav">
       <div className="lp-container lp-nav__inner">
@@ -669,7 +674,7 @@ function Navbar({ onEnter, onNavigateToDocs }) {
               className="lp-nav__link"
               onClick={scrollToId(l.id)}
             >
-              {l.label}
+              {t(`landing.nav.${l.key}`)}
             </a>
           ))}
           <button
@@ -678,7 +683,7 @@ function Navbar({ onEnter, onNavigateToDocs }) {
             className="lp-nav__link"
             onClick={onNavigateToDocs}
           >
-            Docs
+            {t("landing.nav.docs")}
           </button>
         </nav>
 
@@ -690,7 +695,7 @@ function Navbar({ onEnter, onNavigateToDocs }) {
             className="lp-btn lp-btn--primary lp-btn--sm"
             onClick={onEnter}
           >
-            Try Demo <ArrowRight size={14} style={{ display: "inline-block", marginLeft: 4 }} />
+            {t("landing.nav.tryDemo")} <ArrowRight size={14} style={{ display: "inline-block", marginLeft: 4 }} />
           </button>
         </div>
       </div>
@@ -699,27 +704,28 @@ function Navbar({ onEnter, onNavigateToDocs }) {
 }
 
 function Hero({ onEnter, onNavigateToDocs }) {
+  const { t } = useTranslation();
+
   return (
     <section id="top" className="lp-hero">
       <div className="lp-container">
         <div className="lp-enter" style={{ "--d": "0.05s" }}>
           <span className="lp-badge">
             <span className="lp-badge__dot" />
-            No-code workflow automation
+            {t("landing.hero.badgeText")}
             <span className="lp-badge__sep" />
-            <span style={{ color: "var(--text)" }}>Llama 3.3 ready</span>
+            <span style={{ color: "var(--text)" }}>{t("landing.hero.badgeModel")}</span>
           </span>
         </div>
 
         <h1 className="lp-h1 lp-enter" style={{ "--d": "0.12s" }}>
-          Automate office work.
+          {t("landing.hero.title")}
           <br />
-          <span className="lp-muted">Without writing code.</span>
+          <span className="lp-muted">{t("landing.hero.titleMuted")}</span>
         </h1>
 
         <p className="lp-lead lp-enter" style={{ "--d": "0.2s" }}>
-          Connect email, documents and AI models on a visual canvas. Build
-          powerful automations in minutes — not sprints.
+          {t("landing.hero.lead")}
         </p>
 
         <div className="lp-hero__ctas lp-enter" style={{ "--d": "0.28s" }}>
@@ -729,7 +735,7 @@ function Hero({ onEnter, onNavigateToDocs }) {
             className="lp-btn lp-btn--primary lp-btn--lg"
             onClick={onEnter}
           >
-            Try Live Demo <ArrowRight size={16} strokeWidth={2} />
+            {t("landing.hero.ctaDemo")} <ArrowRight size={16} strokeWidth={2} />
           </button>
           <button
             id="hero-view-docs"
@@ -737,11 +743,11 @@ function Hero({ onEnter, onNavigateToDocs }) {
             className="lp-btn lp-btn--ghost lp-btn--lg"
             onClick={onNavigateToDocs}
           >
-            Read the docs
+            {t("landing.hero.ctaDocs")}
           </button>
         </div>
         <p className="lp-hero__meta lp-enter" style={{ "--d": "0.34s" }}>
-          Free to start · No credit card required
+          {t("landing.hero.meta")}
         </p>
 
         <div className="lp-hero__visual lp-enter" style={{ "--d": "0.45s" }}>
@@ -766,39 +772,41 @@ function SectionHead({ eyebrow, title, muted, aside }) {
   );
 }
 
-const STEPS = [
-  {
-    num: "01",
-    Icon: Plug,
-    title: "Connect your apps",
-    desc: "Link email, spreadsheets and calendars in seconds with pre-built connectors.",
-  },
-  {
-    num: "02",
-    Icon: Workflow,
-    title: "Build the logic",
-    desc: "Drag, drop and wire nodes on a visual canvas. Add AI, conditions and loops.",
-  },
-  {
-    num: "03",
-    Icon: Zap,
-    title: "Let it run",
-    desc: "Activate the workflow and watch tasks complete themselves — monitored in real time.",
-  },
-];
-
 function HowItWorks() {
+  const { t } = useTranslation();
+
+  const steps = [
+    {
+      num: "01",
+      Icon: Plug,
+      title: t("landing.howItWorks.step1Title"),
+      desc: t("landing.howItWorks.step1Desc"),
+    },
+    {
+      num: "02",
+      Icon: Workflow,
+      title: t("landing.howItWorks.step2Title"),
+      desc: t("landing.howItWorks.step2Desc"),
+    },
+    {
+      num: "03",
+      Icon: Zap,
+      title: t("landing.howItWorks.step3Title"),
+      desc: t("landing.howItWorks.step3Desc"),
+    },
+  ];
+
   return (
     <section id="how-it-works" className="lp-section">
       <div className="lp-container">
         <SectionHead
-          eyebrow="How it works"
-          title="Three steps."
-          muted="From idea to automation."
-          aside="No scripts, no servers, no setup. If you can sketch a flowchart, you can ship an automation."
+          eyebrow={t("landing.howItWorks.eyebrow")}
+          title={t("landing.howItWorks.title")}
+          muted={t("landing.howItWorks.muted")}
+          aside={t("landing.howItWorks.aside")}
         />
         <div className="lp-grid lp-grid--3">
-          {STEPS.map(({ num, Icon, title, desc }, i) => (
+          {steps.map(({ num, Icon, title, desc }, i) => (
             <article
               key={num}
               className="lp-cell lp-reveal"
@@ -820,41 +828,43 @@ function HowItWorks() {
   );
 }
 
-const FEATURES = [
-  {
-    Icon: MousePointerClick,
-    title: "Drag & drop canvas",
-    desc: "Build complex workflows visually. Connect nodes with a click, rearrange freely and see your logic come alive.",
-  },
-  {
-    Icon: Sparkles,
-    title: "AI-powered nodes",
-    desc: "Embed GPT, Llama and other models directly in your flows. Summarise, classify and generate — automatically.",
-  },
-  {
-    Icon: Activity,
-    title: "Real-time monitoring",
-    desc: "Watch every run live. Inspect node outputs, catch errors instantly and replay failed steps.",
-  },
-  {
-    Icon: Rocket,
-    title: "One-click deploy",
-    desc: "Publish with a single click. Schedule it, trigger it via webhook, or run it on demand.",
-  },
-];
-
 function Features() {
+  const { t } = useTranslation();
+
+  const features = [
+    {
+      Icon: MousePointerClick,
+      title: t("landing.features.f1Title"),
+      desc: t("landing.features.f1Desc"),
+    },
+    {
+      Icon: Sparkles,
+      title: t("landing.features.f2Title"),
+      desc: t("landing.features.f2Desc"),
+    },
+    {
+      Icon: Activity,
+      title: t("landing.features.f3Title"),
+      desc: t("landing.features.f3Desc"),
+    },
+    {
+      Icon: Rocket,
+      title: t("landing.features.f4Title"),
+      desc: t("landing.features.f4Desc"),
+    },
+  ];
+
   return (
     <section id="features" className="lp-section">
       <div className="lp-container">
         <SectionHead
-          eyebrow="Features"
-          title="Everything you need."
-          muted="Nothing you don't."
-          aside="Four capabilities form the core of every workflow you'll build on AI Work Flow."
+          eyebrow={t("landing.features.eyebrow")}
+          title={t("landing.features.title")}
+          muted={t("landing.features.muted")}
+          aside={t("landing.features.aside")}
         />
         <div className="lp-grid lp-grid--2">
-          {FEATURES.map(({ Icon, title, desc }, i) => (
+          {features.map(({ Icon, title, desc }, i) => (
             <article
               key={title}
               className="lp-cell lp-cell--feature lp-reveal"
@@ -873,27 +883,27 @@ function Features() {
   );
 }
 
-const CANVAS_POINTS = [
-  "Infinite, zoomable workspace",
-  "Live data flowing between nodes",
-  "Group, duplicate and version flows",
-];
-
 function CanvasShowcase() {
+  const { t } = useTranslation();
+
+  const canvasPoints = [
+    t("landing.canvas.point1"),
+    t("landing.canvas.point2"),
+    t("landing.canvas.point3"),
+  ];
+
   return (
     <section id="canvas" className="lp-section">
       <div className="lp-container lp-split">
         <div className="lp-split__text lp-reveal">
-          <span className="lp-eyebrow">Visual canvas</span>
+          <span className="lp-eyebrow">{t("landing.canvas.eyebrow")}</span>
           <h2 className="lp-h2">
-            Design workflows <span className="lp-muted">like a diagram.</span>
+            {t("landing.canvas.title")}{" "}
+            <span className="lp-muted">{t("landing.canvas.titleMuted")}</span>
           </h2>
-          <p>
-            Pan, zoom, group and connect. Every node shows what it receives and
-            what it sends — so debugging feels like reading a map.
-          </p>
+          <p>{t("landing.canvas.lead")}</p>
           <ul className="lp-checklist">
-            {CANVAS_POINTS.map((p) => (
+            {canvasPoints.map((p) => (
               <li key={p}>
                 <span className="lp-checklist__mark">
                   <Check size={12} strokeWidth={2.2} />
@@ -912,10 +922,10 @@ function CanvasShowcase() {
                 <span />
                 <span />
               </div>
-              <span className="lp-panel__title">ai work flow — workflow canvas</span>
+              <span className="lp-panel__title">{t("landing.canvas.panelTitle")}</span>
               <span className="lp-panel__status">
                 <i aria-hidden="true" />
-                running
+                {t("landing.canvas.running")}
               </span>
             </div>
             <div className="lp-panel__body lp-panel__body--flush">
@@ -928,26 +938,28 @@ function CanvasShowcase() {
   );
 }
 
-const CATEGORIES = [
-  { Icon: Brain, label: "AI", count: "12+", desc: "GPT, Llama, Claude, embeddings, classifiers" },
-  { Icon: Briefcase, label: "Office tools", count: "18+", desc: "Email, Sheets, Docs, Calendar, Drive" },
-  { Icon: Database, label: "Data processing", count: "10+", desc: "Transform, filter, aggregate and join data" },
-  { Icon: GitBranch, label: "Logic control", count: "08+", desc: "If / else, loops, switches, merge, split" },
-  { Icon: Wrench, label: "Utilities", count: "14+", desc: "HTTP, webhooks, delays, variables, code" },
-];
-
 function NodeLibrary() {
+  const { t } = useTranslation();
+
+  const categories = [
+    { Icon: Brain, label: t("landing.nodes.c1Label"), count: "12+", desc: t("landing.nodes.c1Desc") },
+    { Icon: Briefcase, label: t("landing.nodes.c2Label"), count: "18+", desc: t("landing.nodes.c2Desc") },
+    { Icon: Database, label: t("landing.nodes.c3Label"), count: "10+", desc: t("landing.nodes.c3Desc") },
+    { Icon: GitBranch, label: t("landing.nodes.c4Label"), count: "08+", desc: t("landing.nodes.c4Desc") },
+    { Icon: Wrench, label: t("landing.nodes.c5Label"), count: "14+", desc: t("landing.nodes.c5Desc") },
+  ];
+
   return (
     <section id="nodes" className="lp-section">
       <div className="lp-container">
         <SectionHead
-          eyebrow="Node library"
-          title="60+ nodes."
-          muted="Zero limits."
-          aside="A growing library of building blocks across five categories — mix them freely."
+          eyebrow={t("landing.nodes.eyebrow")}
+          title={t("landing.nodes.title")}
+          muted={t("landing.nodes.muted")}
+          aside={t("landing.nodes.aside")}
         />
         <div className="lp-list">
-          {CATEGORIES.map(({ Icon, label, count, desc }, i) => (
+          {categories.map(({ Icon, label, count, desc }, i) => (
             <div
               key={label}
               className="lp-row lp-reveal"
@@ -972,19 +984,20 @@ function NodeLibrary() {
 }
 
 function BottomCTA({ onEnter, onNavigateToDocs }) {
+  const { t } = useTranslation();
+
   return (
     <section className="lp-cta">
       <div className="lp-container">
         <div className="lp-cta__box lp-reveal">
           <LogoMark size={44} />
           <h2 className="lp-cta__title">
-            Build your first workflow.
+            {t("landing.cta.title")}
             <br />
-            <span className="lp-muted">It takes five minutes.</span>
+            <span className="lp-muted">{t("landing.cta.titleMuted")}</span>
           </h2>
           <p className="lp-lead">
-            Join teams automating their office work with AI Work Flow. No credit card
-            required.
+            {t("landing.cta.lead")}
           </p>
           <div className="lp-hero__ctas">
             <button
@@ -993,7 +1006,7 @@ function BottomCTA({ onEnter, onNavigateToDocs }) {
               className="lp-btn lp-btn--primary lp-btn--lg"
               onClick={onEnter}
             >
-              Try Live Demo <ArrowRight size={16} strokeWidth={2} />
+              {t("landing.cta.btnDemo")} <ArrowRight size={16} strokeWidth={2} />
             </button>
             <button
               id="cta-view-docs"
@@ -1001,7 +1014,7 @@ function BottomCTA({ onEnter, onNavigateToDocs }) {
               className="lp-btn lp-btn--ghost lp-btn--lg"
               onClick={onNavigateToDocs}
             >
-              Documentation
+              {t("landing.cta.btnDocs")}
             </button>
           </div>
         </div>
@@ -1011,6 +1024,15 @@ function BottomCTA({ onEnter, onNavigateToDocs }) {
 }
 
 function Footer() {
+  const { t } = useTranslation();
+
+  const footerLinks = [
+    { key: "about", label: t("landing.footer.about") },
+    { key: "contact", label: t("landing.footer.contact") },
+    { key: "privacy", label: t("landing.footer.privacy") },
+    { key: "terms", label: t("landing.footer.terms") },
+  ];
+
   return (
     <footer className="lp-footer">
       <div className="lp-container lp-footer__inner">
@@ -1020,9 +1042,9 @@ function Footer() {
             AI Work Flow
           </span>
           <nav className="lp-footer__links" aria-label="Footer">
-            {["About", "Contact", "Privacy", "Terms"].map((link) => (
-              <a key={link} id={`footer-${link.toLowerCase()}`} href="#">
-                {link}
+            {footerLinks.map((link) => (
+              <a key={link.key} id={`footer-${link.key}`} href="#">
+                {link.label}
               </a>
             ))}
           </nav>
@@ -1035,16 +1057,19 @@ function Footer() {
 
 /* ─── LandingPage (default export) ─── */
 export default function LandingPage({ onEnter, onNavigateToDocs = () => {} }) {
+  const { i18n } = useTranslation();
   const rootRef = useRef(null);
   useReveal(rootRef);
 
   useEffect(() => {
     const prev = document.title;
-    document.title = "AI Work Flow — No-code workflow automation";
+    document.title = i18n.language === "vi"
+      ? "AI Work Flow — Tự động hóa quy trình không cần code"
+      : "AI Work Flow — No-code workflow automation";
     return () => {
       document.title = prev;
     };
-  }, []);
+  }, [i18n.language]);
 
   return (
     <div ref={rootRef} className="lp">
