@@ -29,6 +29,7 @@ import {
   Wrench,
   Zap,
 } from "lucide-react";
+import LanguageSwitcher from "../../components/common/LanguageSwitcher";
 import "./LandingPage.css";
 
 /* ─── Raw colour values for SVG (mirror the CSS tokens) ─── */
@@ -681,7 +682,8 @@ function Navbar({ onEnter, onNavigateToDocs }) {
           </button>
         </nav>
 
-        <div className="lp-nav__actions">
+        <div className="lp-nav__actions" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <LanguageSwitcher />
           <button
             id="nav-get-started"
             type="button"
