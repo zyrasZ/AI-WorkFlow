@@ -3,6 +3,7 @@
  */
 
 import { API_BASE_URL } from "./config.js";
+import { DEFAULT_DEMO_WORKFLOWS, DEMO_USER, DEMO_TOKEN } from "./demoData.js";
 
 /**
  * Base API request handler
@@ -13,8 +14,12 @@ import { API_BASE_URL } from "./config.js";
 async function request(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
 
-  // Get auth token from localStorage
-  const token = localStorage.getItem("office_weave_token");
+  // Get auth token from localStorage (fallback to demo token)
+  let token = localStorage.getItem("office_weave_token");
+  if (!token) {
+    token = DEMO_TOKEN;
+    localStorage.setItem("office_weave_token", DEMO_TOKEN);
+  }
 
   // Debugging: Log token hiện tại
   console.log("=== API REQUEST DEBUG ===");
@@ -222,7 +227,12 @@ export const apiClient = {
    * @returns {Promise<{data: object}>}
    */
   async getCurrentUser() {
-    return request("/api/auth/user");
+    try {
+      return await request("/api/auth/user");
+    } catch (err) {
+      console.warn("Backend auth offline, using demo user:", err.message);
+      return { data: { user: DEMO_USER } };
+    }
   },
 
   // ==================== WORKFLOW METHODS ====================
@@ -238,10 +248,23 @@ export const apiClient = {
    * @returns {Promise<{data: object}>}
    */
   async createWorkflow(workflow) {
-    return request("/api/workflows", {
-      method: "POST",
-      body: JSON.stringify(workflow),
-    });
+    try {
+      return await request("/api/workflows", {
+        method: "POST",
+        body: JSON.stringify(workflow),
+      });
+    } catch (err) {
+      console.warn("Backend createWorkflow offline, using local workflow:", err.message);
+      const id = workflow.id || `wf_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      return {
+        data: {
+          ...workflow,
+          id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      };
+    }
   },
 
   /**
@@ -253,10 +276,20 @@ export const apiClient = {
    * @returns {Promise<{data: {workflows: Array, total: number, limit: number, offset: number}}>}
    */
   async getWorkflows(params = {}) {
-    const query = new URLSearchParams(
-      Object.entries(params).filter(([, v]) => v != null),
-    ).toString();
-    return request(`/api/workflows${query ? `?${query}` : ""}`);
+    try {
+      const query = new URLSearchParams(
+        Object.entries(params).filter(([, v]) => v != null),
+      ).toString();
+      const res = await request(`/api/workflows${query ? `?${query}` : ""}`);
+      const list = res?.data?.workflows || res?.workflows || [];
+      if (list.length > 0) {
+        return res;
+      }
+      return { data: { workflows: DEFAULT_DEMO_WORKFLOWS, total: DEFAULT_DEMO_WORKFLOWS.length } };
+    } catch (err) {
+      console.warn("Backend getWorkflows offline, using fallback demo workflows:", err.message);
+      return { data: { workflows: DEFAULT_DEMO_WORKFLOWS, total: DEFAULT_DEMO_WORKFLOWS.length } };
+    }
   },
 
   /**
@@ -265,7 +298,24 @@ export const apiClient = {
    * @returns {Promise<{data: object}>}
    */
   async getWorkflow(id) {
-    return request(`/api/workflows/${id}`);
+    try {
+      return await request(`/api/workflows/${id}`);
+    } catch (err) {
+      console.warn(`Backend getWorkflow(${id}) offline, looking in demo workflows:`, err.message);
+      const match = DEFAULT_DEMO_WORKFLOWS.find((w) => w.id === id);
+      if (match) {
+        return { data: match };
+      }
+      return {
+        data: {
+          id,
+          name: "Untitled Workflow",
+          nodes: [],
+          edges: [],
+          metadata: { nodes: [], edges: [] },
+        },
+      };
+    }
   },
 
   /**

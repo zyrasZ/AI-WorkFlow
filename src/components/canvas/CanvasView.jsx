@@ -125,9 +125,23 @@ export default function CanvasView({
 
         setEdges(loadedEdges.length > 0 ? loadedEdges : [])
       } catch (error) {
-        console.error('❌ Failed to load project data:', error)
-        setNodes([])
-        setEdges([])
+        console.warn('❌ Failed to load project from API, using project demo nodes:', error)
+        const fallbackNodes = project.nodes || []
+        const fallbackEdges = project.edges || []
+        if (fallbackNodes.length > 0) {
+          const restored = fallbackNodes.map(node => {
+            const registryNode = nodeRegistry.nodeTypes?.get(node.data?.nodeType)
+            const processor = registryNode?.processor || node.data?.processor || undefined
+            return {
+              ...node,
+              data: { ...node.data, processor, ...buildNodeCallbacks() },
+            }
+          })
+          setNodes(restored)
+        } else {
+          setNodes([])
+        }
+        setEdges(fallbackEdges)
       }
     },
     [buildNodeCallbacks, setNodes, setEdges]
@@ -226,8 +240,10 @@ export default function CanvasView({
       const project = { id: response.data.id, name: response.data.name, nodes: [], edges: [] }
       onNavigateToCanvas(project)
     } catch (err) {
-      console.error('Failed to create workflow:', err)
-      alert('Không thể tạo workflow mới')
+      console.warn('Backend createWorkflow offline, creating local workflow:', err)
+      const localId = `wf_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+      const project = { id: localId, name: 'Untitled Workflow', nodes: [], edges: [] }
+      onNavigateToCanvas(project)
     }
   }, [onNavigateToCanvas])
 

@@ -5,6 +5,7 @@ import {
   clearAuth,
   getStoredUser,
 } from "../lib/api";
+import { DEMO_USER, DEMO_TOKEN } from "../lib/demoData";
 
 const AuthContext = createContext(null);
 
@@ -13,8 +14,8 @@ const AuthContext = createContext(null);
  * Wrap your app with this to provide authentication context
  */
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(DEMO_USER);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Check authentication on mount - ONLY ONCE
@@ -44,42 +45,37 @@ export function AuthProvider({ children }) {
    */
   async function checkAuth() {
     try {
-      setLoading(true);
-
-      // Check if we have a token first
-      const token = localStorage.getItem("office_weave_token");
+      // Ensure token exists (or initialize demo token)
+      let token = localStorage.getItem("office_weave_token");
       if (!token) {
-        setUser(null);
-        setLoading(false);
-        return;
+        token = DEMO_TOKEN;
+        localStorage.setItem("office_weave_token", DEMO_TOKEN);
       }
 
       // Try to restore from localStorage first (faster, no network)
-      const storedUser = getStoredUser();
-      if (storedUser) {
-        console.log("Restored user from localStorage:", storedUser);
-        setUser(storedUser);
-        setLoading(false);
-        return;
+      let storedUser = getStoredUser();
+      if (!storedUser) {
+        storedUser = DEMO_USER;
+        localStorage.setItem("user_data", JSON.stringify(DEMO_USER));
       }
 
-      // If no stored user but have token, fetch from backend
+      setUser(storedUser);
+
+      // Verify or refresh from backend in the background
       try {
         const response = await apiClient.getCurrentUser();
-        console.log("Auth check successful:", response.data);
-        const userData = response.data || response;
-        localStorage.setItem("user_data", JSON.stringify(userData));
-        setUser(userData);
-        setError(null);
+        const userData = response.data?.user || response.data || response;
+        if (userData && (userData.email || userData.name)) {
+          localStorage.setItem("user_data", JSON.stringify(userData));
+          setUser(userData);
+        }
       } catch (err) {
-        console.log("Auth check failed:", err.message);
-        // Token invalid - clear everything
-        clearAuth();
-        setUser(null);
+        console.log("Backend auth check offline or fallback, keeping demo user:", err.message);
+        // Do not clear auth; keep demo user
       }
     } catch (err) {
-      console.log("checkAuth error:", err.message);
-      setUser(null);
+      console.log("checkAuth fallback to demo user:", err.message);
+      setUser(DEMO_USER);
     } finally {
       setLoading(false);
     }

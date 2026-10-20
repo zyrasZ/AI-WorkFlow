@@ -47,13 +47,26 @@ export default function App() {
     navigateToCanvas(project);
     try {
       const response = await apiClient.getWorkflow(project.id);
-      const workflow = response.data;
-      const nodes = workflow.metadata?.nodes || workflow.nodes || [];
-      const edges = workflow.metadata?.edges || workflow.edges || [];
+      const workflow = response?.data || response;
+      const nodes =
+        workflow?.metadata?.nodes ||
+        workflow?.nodes ||
+        project.nodes ||
+        [];
+      const edges =
+        workflow?.metadata?.edges ||
+        workflow?.edges ||
+        project.edges ||
+        [];
       setCurrentProject({ ...project, nodes, edges, _loaded: true });
     } catch (err) {
-      console.error("❌ Failed to load project:", err);
-      setCurrentProject({ ...project, nodes: [], edges: [], _loaded: true });
+      console.warn("❌ Failed to load project from API, using demo nodes:", err);
+      setCurrentProject({
+        ...project,
+        nodes: project.nodes || [],
+        edges: project.edges || [],
+        _loaded: true,
+      });
     }
   };
 
