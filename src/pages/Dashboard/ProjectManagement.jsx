@@ -748,7 +748,7 @@ export default function ProjectManagement({
                       margin: 0,
                     }}
                   >
-                    Chưa có workflow
+                    No workflows yet
                   </p>
                 </div>
               )}
@@ -996,7 +996,7 @@ export default function ProjectManagement({
                     fontSize: "13px",
                   }}
                 >
-                  Thử lại
+                  Retry
                 </button>
               </div>
             ) : (
@@ -1022,10 +1022,9 @@ export default function ProjectManagement({
                         size={48}
                         style={{ margin: "0 auto 16px", opacity: 0.3 }}
                       />
-                      <p>Chưa có workflow nào</p>
+                      <p>No workflows yet</p>
                       <p style={{ fontSize: "12px", marginTop: "8px" }}>
-                        Tạo workflow đầu tiên của bạn bằng cách click nút "+
-                        Create New File"
+                        Create your first workflow by clicking "+ Create New File"
                       </p>
                     </div>
                   ) : (
